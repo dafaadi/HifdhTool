@@ -485,15 +485,39 @@ html.dark-mode .active-mistake {
   display: none;
 }
 
-/* ── Wide tablet / small desktop (≤1100px): quran overflow fix ── */
-@media (max-width: 1100px) {
+/* ── Wide tablet / small desktop (≤1400px): quran continuous flow ── */
+@media (max-width: 1400px) {
+  /* Quran container: flow lines together continuously */
   .quran-container {
     width: 100%;
     min-width: unset;
     max-width: 100%;
     box-sizing: border-box;
+    display: block; /* ensure block container */
+    text-align: justify;
+    text-align-last: center; /* Center the very last line of the page */
+    text-justify: inter-word;
+    word-spacing: normal;
+    letter-spacing: normal;
   }
-  .quran-line { white-space: normal; }
+  
+  /* CRITICAL FIX: Strip block structure off KFGQPC lines. */
+  .quran-line {
+    display: inline;
+    white-space: normal;
+  }
+
+  /* Each quran-line wrap: re-override the justified-line class */
+  .quran-container .justified-line {
+    text-align: justify;
+    text-justify: inter-word;
+    text-align-last: auto;
+  }
+  
+  /* Neutralise the enlarged word-space that amplifies gaps */
+  .quran-container .word-space {
+    font-size: inherit;
+  }
 }
 
 /* ── Tablet (≤900px) ── */
@@ -596,10 +620,9 @@ html.dark-mode .active-mistake {
   .quran-wrapper { padding: 1rem 0.5rem 5.5rem; }
 
   .quran-container {
-    font-size: 1.6rem;
+    font-size: 1.35rem; /* Slight tweak for readability */
     line-height: 2.1;
     padding: 0.75rem;
-    min-width: 100%;
   }
   .app-header { padding: 0.75rem 1rem; }
   .app-header h1 { font-size: 1rem; }

@@ -138,6 +138,8 @@ export const QuranPage = ({ mode, pageData, onMistake, activeMistake }: QuranPag
               </React.Fragment>
             );
           })}
+          {/* Ensure inter-line trailing spaces exist so inline-mode boundaries flow correctly without word glue */}
+          {line.line_type === 'ayah' && <span className="word-space"> </span>}
         </div>
       ))}
     </div>
