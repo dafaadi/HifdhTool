@@ -8,6 +8,7 @@ export interface MistakesSidebarProps {
   onUpdateComment?: (id: string, comment: string | undefined) => void;
   onMistakeClick?: (mistake: MistakeEntry) => void;
   activeMistakeId?: string | null;
+  mobileOpen?: boolean;
 }
 
 const MistakeCommentEditor = ({ mistake, onUpdate }: { mistake: MistakeEntry, onUpdate?: (id: string, c: string | undefined) => void }) => {
@@ -69,10 +70,14 @@ const MistakeCommentEditor = ({ mistake, onUpdate }: { mistake: MistakeEntry, on
   );
 };
 
-export const MistakesSidebar = ({ mistakes, onClear, onDelete, onUpdateComment, onMistakeClick, activeMistakeId }: MistakesSidebarProps) => {
+export const MistakesSidebar = ({ mistakes, onClear, onDelete, onUpdateComment, onMistakeClick, activeMistakeId, mobileOpen, onClose }: MistakesSidebarProps & { onClose?: () => void }) => {
   const [confirming, setConfirming] = useState(false);
   return (
-    <div className="mistakes-sidebar">
+    <div className={`mistakes-sidebar${mobileOpen ? ' mobile-open' : ''}`}>
+      {/* Mobile-only close row */}
+      <div className="sidebar-close-row">
+        <button className="sidebar-close-btn" onClick={onClose} aria-label="Close">✕ Close</button>
+      </div>
       <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem 2rem', borderBottom: '1px solid var(--border-color)', background: 'var(--surface-color)', backdropFilter: 'blur(10px)', zIndex: 10}}>
         <h2 style={{padding: 0, border: 'none', background: 'transparent', color: 'var(--text-primary)'}}>Mistakes ({mistakes.length})</h2>
         {onClear && mistakes.length > 0 && (

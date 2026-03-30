@@ -109,9 +109,7 @@ export const QuranPage = ({ mode, pageData, onMistake, activeMistake }: QuranPag
                     onMouseEnter={() => mode === 'ayah' && setHoveredAyah(word.ayah)}
                     onMouseLeave={() => mode === 'ayah' && setHoveredAyah(null)}
                   >
-                    <span className="ayah-end-marker" data-ayah={word.ayah} data-surah={word.surah} data-text={word.text}> 
-                      {'\u06DD'}{word.text} 
-                    </span>
+                    <span className="ayah-end-marker" data-ayah={word.ayah} data-surah={word.surah} data-text={word.text}>{word.text}</span>
                   </span>
                   {wIdx < line.words.length - 1 && <span className="word-space"> </span>}
                 </React.Fragment>

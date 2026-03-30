@@ -14,6 +14,7 @@ const quranData = quranDataJson as any[];
 function App() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [mode, setMode] = useState<SelectMode>('ayah');
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
   const [mistakes, setMistakes] = useState<MistakeEntry[]>(() => {
     const saved = localStorage.getItem('quranMistakes');
     return saved ? JSON.parse(saved) : [];
@@ -73,6 +74,7 @@ function App() {
   const handleMistakeClick = (mistake: MistakeEntry) => {
     setActiveMistake(mistake);
     setMode(mistake.mode);
+    setSidebarOpen(false); // close drawer on mobile so the highlight is visible
 
     // Using a slightly longer delay to ensure React commits the mode change to the DOM
     setTimeout(() => {
@@ -125,6 +127,7 @@ function App() {
           >
             {darkMode ? '☀️ Light' : '🌙 Dark'}
           </button>
+          {/* Mode toggles: visible in header on desktop, moved to bottom bar on mobile via CSS */}
           <div className="mode-toggles">
             {(['ayah', 'word', 'letter', 'tashkeel'] as SelectMode[]).map((m) => (
               <button
@@ -136,6 +139,10 @@ function App() {
               </button>
             ))}
           </div>
+          {/* Hamburger — only visible on mobile */}
+          <button className="hamburger-btn" onClick={() => setSidebarOpen(o => !o)} aria-label="Toggle mistakes">
+            {sidebarOpen ? '✕' : '☰'}
+          </button>
         </div>
       </header>
       
@@ -177,6 +184,8 @@ function App() {
             activeMistake={activeMistake}
           />
         </div>
+        {/* Overlay — tapping outside closes sidebar on mobile */}
+        {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
         <MistakesSidebar 
           mistakes={mistakes.filter(m => m.pageNumber === currentPage)} 
           onClear={handleClear} 
@@ -184,8 +193,22 @@ function App() {
           onUpdateComment={handleUpdateComment}
           onMistakeClick={handleMistakeClick}
           activeMistakeId={activeMistake?.id}
+          mobileOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
         />
       </main>
+      {/* Mobile bottom mode bar — hidden on desktop via CSS */}
+      <div className="mobile-mode-bar">
+        {(['ayah', 'word', 'letter', 'tashkeel'] as SelectMode[]).map((m) => (
+          <button
+            key={m}
+            className={`mobile-mode-btn ${mode === m ? 'active' : ''}`}
+            onClick={() => setMode(m)}
+          >
+            {m.charAt(0).toUpperCase() + m.slice(1)}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

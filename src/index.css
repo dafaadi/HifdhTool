@@ -1,4 +1,11 @@
-@import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+@font-face {
+  font-family: 'UthmanicHafs';
+  src: url('https://verses.quran.foundation/fonts/quran/hafs/uthmanic_hafs/UthmanicHafs1Ver18.woff2') format('woff2');
+  font-display: swap;
+  unicode-range: U+0600-06FF, U+0610-061A, U+064B-065F, U+0670, U+06D6-06ED, U+FE70-FEFF;
+}
 
 :root {
   --bg-color: #f3f4f6;
@@ -110,7 +117,7 @@ body {
   height: fit-content;
   direction: rtl;
   text-align: justify;
-  font-family: 'Amiri', serif;
+  font-family: 'UthmanicHafs', 'Noto Naskh Arabic', serif;
   font-size: 2.8rem;
   line-height: 2.3;
   color: #1a1a1a;
@@ -158,7 +165,7 @@ body {
 .basmallah {
   width: 100%;
   text-align: center;
-  font-family: 'Amiri', serif;
+  font-family: 'UthmanicHafs', 'Noto Naskh Arabic', serif;
   font-size: 1.8rem;
   padding: 0.5rem 0;
   margin-bottom: 0.5rem;
@@ -183,12 +190,14 @@ body {
 }
 
 .ayah-end-marker {
-  font-size: 1.8rem;
+  font-family: 'UthmanicHafs', serif;
+  font-size: 2.2rem;
+  line-height: 1;
   color: var(--primary-color);
-  margin: 0 0.25rem;
-  user-select: none;
   display: inline-block;
   vertical-align: middle;
+  margin: 0 0.2rem;
+  user-select: none;
 }
 
 /* Specific Mode Interactions */
@@ -355,7 +364,7 @@ body {
 }
 
 .mistake-text {
-  font-family: 'Amiri', serif;
+  font-family: 'UthmanicHafs', 'Noto Naskh Arabic', serif;
   font-size: 1.75rem;
   direction: rtl;
   color: var(--text-primary);
@@ -448,3 +457,215 @@ html.dark-mode .active-mistake {
 .mistake-item.active {
   box-shadow: 0 4px 12px rgba(14, 165, 233, 0.2);
 }
+
+/* ─── Responsive ──────────────────────────────────────────── */
+
+/* Hamburger button — hidden on desktop */
+.hamburger-btn {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 1.4rem;
+  cursor: pointer;
+  color: var(--text-primary);
+  padding: 0.3rem 0.5rem;
+  border-radius: 0.4rem;
+  transition: background 0.15s;
+}
+.hamburger-btn:hover { background: rgba(0,0,0,0.06); }
+
+/* Mobile bottom mode bar — hidden on desktop */
+.mobile-mode-bar { display: none; }
+
+/* Overlay behind drawer — hidden on desktop */
+.sidebar-overlay { display: none; }
+
+/* Close row inside sidebar — hidden on desktop */
+.sidebar-close-row {
+  display: none;
+}
+
+/* ── Wide tablet / small desktop (≤1100px): quran overflow fix ── */
+@media (max-width: 1100px) {
+  .quran-container {
+    width: 100%;
+    min-width: unset;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  .quran-line { white-space: normal; }
+}
+
+/* ── Tablet (≤900px) ── */
+@media (max-width: 900px) {
+  .mistakes-sidebar { width: 280px; }
+
+  /* Shrink sidebar internals */
+  .mistake-number { width: 2.25rem; font-size: 0.95rem; }
+  .mistake-details { padding: 0.65rem 0.75rem; gap: 0.25rem; }
+  .mistake-text { font-size: 1.35rem; }
+  .mistake-mode { font-size: 0.65rem; }
+  .mistake-loc { font-size: 0.72rem; padding: 0.15rem 0.35rem; }
+
+  /* Quran container: fill available width, allow lines to wrap vertically */
+  .quran-container {
+    font-size: 2.2rem;
+    padding: 1.5rem;
+  }
+}
+
+/* ── Small tablet (≤680px) ── */
+@media (max-width: 680px) {
+  .mistakes-sidebar { width: 240px; }
+
+  /* Further shrink sidebar */
+  .mistake-number { width: 2rem; font-size: 0.85rem; }
+  .mistake-details { padding: 0.5rem 0.6rem; }
+  .mistake-text { font-size: 1.15rem; }
+  .mistake-loc { font-size: 0.68rem; }
+
+  .quran-container { font-size: 1.8rem; line-height: 2.2; padding: 1rem; }
+  .app-header h1 { font-size: 1.1rem; }
+  .toggle-btn { padding: 0.4rem 0.9rem; font-size: 0.85rem; }
+}
+
+/* ── Mobile (≤626px) ── */
+@media (max-width: 626px) {
+  /* Show hamburger, hide header mode-toggles */
+  .hamburger-btn { display: inline-flex; align-items: center; justify-content: center; }
+  .app-header .mode-toggles { display: none; }
+
+  /* Sidebar becomes a fixed right-side slide-in drawer */
+  .mistakes-sidebar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 85vw;
+    max-width: 340px;
+    height: 100dvh;
+    z-index: 200;
+    transform: translateX(100%);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: -6px 0 24px rgba(0,0,0,0.18);
+  }
+  .mistakes-sidebar.mobile-open { transform: translateX(0); }
+
+  /* Dim overlay when drawer is open */
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 199;
+    backdrop-filter: blur(2px);
+  }
+
+  /* Fixed bottom mode bar */
+  .mobile-mode-bar {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background: var(--surface-color);
+    border-top: 1px solid var(--border-color);
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.08);
+    padding: 0.4rem 0.5rem;
+    gap: 0.4rem;
+    justify-content: space-around;
+    /* Safe area for notched phones */
+    padding-bottom: max(0.4rem, env(safe-area-inset-bottom));
+  }
+  .mobile-mode-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    border-radius: 0.6rem;
+    padding: 0.55rem 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .mobile-mode-btn.active { background: var(--primary-color); color: #fff; font-weight: 600; }
+  .mobile-mode-btn:hover:not(.active) { background: rgba(0,0,0,0.05); color: var(--text-primary); }
+
+  /* Extra bottom spacing so page content clears the bottom bar */
+  .quran-wrapper { padding: 1rem 0.5rem 5.5rem; }
+
+  .quran-container {
+    font-size: 1.6rem;
+    line-height: 2.1;
+    padding: 0.75rem;
+    min-width: 100%;
+  }
+  .app-header { padding: 0.75rem 1rem; }
+  .app-header h1 { font-size: 1rem; }
+
+  /* Pagination: inputs row on top, nav buttons row below */
+  .pagination-bar {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0.5rem 0.75rem;
+    gap: 0.4rem;
+  }
+  .pagination-bar .page-inputs {
+    order: 1;
+    justify-content: center;
+  }
+  .pagination-bar > button:first-child {
+    order: 2;
+  }
+  .pagination-bar > button:last-child {
+    order: 2;
+  }
+  /* Put both nav buttons in a flex row */
+  .pagination-bar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 0.4rem;
+  }
+  .pagination-bar .page-inputs {
+    grid-column: 1 / -1;
+    justify-content: center;
+  }
+  .pagination-bar > button:first-child {
+    grid-column: 1;
+  }
+  .pagination-bar > button:last-child {
+    grid-column: 2;
+  }
+
+  /* Close row — shown on mobile */
+  .sidebar-close-row {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+  }
+  .sidebar-close-btn {
+    background: none;
+    border: 1px solid var(--danger-color);
+    color: var(--danger-color);
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0.3rem 0.75rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .sidebar-close-btn:hover {
+    background: var(--danger-color);
+    color: #fff;
+  }
+}
+
+/* Dark mode for mobile elements */
+html.dark-mode .mobile-mode-bar { background: #1e1e1e; border-color: #374151; }
+html.dark-mode .mobile-mode-btn:hover:not(.active) { background: rgba(255,255,255,0.06); }
+html.dark-mode .hamburger-btn { color: #f3f4f6; }
+html.dark-mode .hamburger-btn:hover { background: rgba(255,255,255,0.08); }
