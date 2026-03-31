@@ -11,6 +11,8 @@ export interface MistakesSidebarProps {
   mobileOpen?: boolean;
   showAllMistakes?: boolean;
   onToggleShowAll?: () => void;
+  width: number;
+  onWidthChange: (w: number) => void;
 }
 
 const MistakeCommentEditor = ({ mistake, onUpdate }: { mistake: MistakeEntry, onUpdate?: (id: string, c: string | undefined) => void }) => {
@@ -72,10 +74,58 @@ const MistakeCommentEditor = ({ mistake, onUpdate }: { mistake: MistakeEntry, on
   );
 };
 
-export const MistakesSidebar = ({ mistakes, onClear, onDelete, onUpdateComment, onMistakeClick, activeMistakeId, mobileOpen, onClose, showAllMistakes, onToggleShowAll }: MistakesSidebarProps & { onClose?: () => void }) => {
+export const MistakesSidebar = ({ mistakes, onClear, onDelete, onUpdateComment, onMistakeClick, activeMistakeId, mobileOpen, onClose, showAllMistakes, onToggleShowAll, width, onWidthChange }: MistakesSidebarProps & { onClose?: () => void }) => {
   const [confirming, setConfirming] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
+
+  const startResizing = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+    
+    const initialX = e.clientX;
+    const initialWidth = width;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const delta = initialX - moveEvent.clientX; // Dragging left increases width for a right-side sidebar
+      const newWidth = Math.min(Math.max(initialWidth + delta, 280), 600);
+      onWidthChange(newWidth);
+    };
+
+    const onMouseUp = () => {
+      setIsResizing(false);
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      document.body.style.cursor = 'default';
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+    document.body.style.cursor = 'ew-resize';
+  };
+
   return (
-    <div className={`mistakes-sidebar${mobileOpen ? ' mobile-open' : ''}`}>
+    <div 
+      className={`mistakes-sidebar${mobileOpen ? ' mobile-open' : ''}${isResizing ? ' resizing' : ''}`}
+      style={{ width: mobileOpen ? '100%' : `${width}px` }}
+    >
+      {!mobileOpen && (
+        <div className="sidebar-resizer" onMouseDown={startResizing}>
+          <div className="resizer-handle">
+            <svg width="6" height="24" viewBox="0 0 6 24" fill="currentColor">
+              <rect x="0" y="0" width="1.5" height="2" rx="0.75" />
+              <rect x="3" y="0" width="1.5" height="2" rx="0.75" />
+              <rect x="0" y="5" width="1.5" height="2" rx="0.75" />
+              <rect x="3" y="5" width="1.5" height="2" rx="0.75" />
+              <rect x="0" y="10" width="1.5" height="2" rx="0.75" />
+              <rect x="3" y="10" width="1.5" height="2" rx="0.75" />
+              <rect x="0" y="15" width="1.5" height="2" rx="0.75" />
+              <rect x="3" y="15" width="1.5" height="2" rx="0.75" />
+              <rect x="0" y="20" width="1.5" height="2" rx="0.75" />
+              <rect x="3" y="20" width="1.5" height="2" rx="0.75" />
+            </svg>
+          </div>
+        </div>
+      )}
       <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.2rem 2rem', borderBottom: '1px solid var(--border-color)', background: 'transparent', zIndex: 10}}>
         <h2 style={{padding: 0, border: 'none', background: 'transparent', color: 'var(--text-primary)', fontSize: '1.2rem'}}>Mistakes ({mistakes.length})</h2>
         {onClear && mistakes.length > 0 && (
@@ -125,7 +175,7 @@ export const MistakesSidebar = ({ mistakes, onClear, onDelete, onUpdateComment, 
           >
             <div className="mistake-number">{i + 1}</div>
             <div className="mistake-details">
-              <span className="mistake-mode">{mistake.mode.toUpperCase()}</span>
+              <span className={`mistake-mode mistake-mode-${mistake.mode}`}>{mistake.mode.toUpperCase()}</span>
               <span className="mistake-text">{mistake.text}</span>
               <span className="mistake-loc">
                 Ayah {mistake.ayahNumber} 

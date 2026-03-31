@@ -4,6 +4,10 @@ import { MistakesSidebar } from './components/MistakesSidebar';
 import type { SelectMode, MistakeEntry } from './types';
 import quranDataJson from './data/quran_v2.json';
 import logo from './assets/faviconhifdhtoolcropped.png';
+import chevronUp from './assets/chevronup.png';
+import chevronDown from './assets/chevrondown.png';
+import chevronUpWhite from './assets/chevronupwhite.png';
+import chevronDownWhite from './assets/chevrondownwhite.png';
 import './App.css';
 
 const englishSurahNames = [
@@ -22,9 +26,7 @@ function App() {
   const [scrollSurah, setScrollSurah] = useState<number>(1);
   const [surahLimits, setSurahLimits] = useState<{ surah: number, limit: number }[]>([]);
 
-  // Track if user manually toggled the header to override auto-scroll logic
   const [isHeaderExpanded, setIsHeaderExpanded] = useState(true);
-  const [userToggledHeader, setUserToggledHeader] = useState(false);
 
   // Rigid scroll-based surah detection
   useEffect(() => {
@@ -32,7 +34,7 @@ function App() {
     if (!wrapper) return;
 
     const handleScroll = () => {
-      // 1. Surah update logic
+      // Surah update logic
       if (surahLimits.length > 1) {
         const { scrollTop, scrollHeight, clientHeight } = wrapper;
         if (scrollHeight > clientHeight) {
@@ -45,28 +47,11 @@ function App() {
           if (activeSurah !== scrollSurah) setScrollSurah(activeSurah);
         }
       }
-
-      // 2. Mobile collapse logic
-      const isCurrentlyScrolled = wrapper.scrollTop > 50;
-
-      // ALWAYS auto-collapse on scroll down, even if manually expanded
-      if (isCurrentlyScrolled && isHeaderExpanded) {
-        setIsHeaderExpanded(false);
-        // We reset the manual toggle flag here because the scroll action takes precedence now
-        setUserToggledHeader(false);
-      }
-
-      // Scroll back to absolute top: reset everything
-      if (wrapper.scrollTop === 0) {
-        setUserToggledHeader(false);
-        // Note: we're still following your requirement to NOT auto-expand at top
-        // But we reset flags so the next scroll-down works fresh
-      }
     };
 
     wrapper.addEventListener('scroll', handleScroll, { passive: true });
     return () => wrapper.removeEventListener('scroll', handleScroll);
-  }, [surahLimits, scrollSurah, userToggledHeader]); // Removed isHeaderExpanded from deps to avoid loop
+  }, [surahLimits, scrollSurah]);
 
   // Keyboard shortcuts for modes: A, S, D, F
   useEffect(() => {
@@ -85,7 +70,7 @@ function App() {
 
   const [mode, setMode] = useState<SelectMode>('ayah');
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
-  const [showAllMistakes, setShowAllMistakes] = useState<boolean>(false);
+  const [showAllMistakes, setShowAllMistakes] = useState<boolean>(true);
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     const saved = localStorage.getItem('darkMode');
     return saved === 'true';
@@ -97,8 +82,34 @@ function App() {
   const [activeMistake, setActiveMistake] = useState<MistakeEntry | null>(null);
   const [fontSize, setFontSize] = useState<number>(() => {
     const saved = localStorage.getItem('quranFontSize');
-    return saved ? parseInt(saved, 10) : 1.35;
+    return saved ? parseFloat(saved) : 3.0;
   });
+  const [fontSizeInput, setFontSizeInput] = useState<string>(fontSize.toFixed(1));
+
+  useEffect(() => {
+    setFontSizeInput(fontSize.toFixed(1));
+  }, [fontSize]);
+
+  const handleFontSizeInput = (val: string) => {
+    setFontSizeInput(val);
+    const num = parseFloat(val);
+    if (!isNaN(num) && num >= 0.8 && num <= 4.5) {
+      setFontSize(num);
+    }
+  };
+
+  const handleFontSizeBlur = () => {
+    const num = parseFloat(fontSizeInput);
+    if (isNaN(num) || num < 0.8) {
+      setFontSize(0.8);
+    } else if (num > 4.5) {
+      setFontSize(4.5);
+    } else {
+      setFontSize(num);
+    }
+  };
+
+  const [sidebarWidth, setSidebarWidth] = useState<number>(380);
 
   useEffect(() => {
     localStorage.setItem('quranFontSize', fontSize.toString());
@@ -278,8 +289,14 @@ function App() {
           <button className="toggle-btn dark-mode-toggle" onClick={() => setDarkMode(!darkMode)}>{darkMode ? '☀️ Light' : '🌙 Dark'}</button>
           <div className="font-size-controls desktop-only">
             <button className="font-size-btn-mini" onClick={() => setFontSize(s => Math.max(0.8, s - 0.1))}>ᴀ⁻</button>
-            <span className="font-label">Font</span>
-            <button className="font-size-btn-mini" onClick={() => setFontSize(s => Math.min(2.5, s + 0.1))}>A⁺</button>
+            <input 
+              type="number" step="0.1" min="0.8" max="4.5" 
+              value={fontSizeInput}
+              className="font-size-input"
+              onChange={(e) => handleFontSizeInput(e.target.value)}
+              onBlur={handleFontSizeBlur}
+            />
+            <button className="font-size-btn-mini" onClick={() => setFontSize(s => Math.min(4.5, s + 0.1))}>A⁺</button>
           </div>
           <div className="mode-toggles">
             {(['ayah', 'word', 'letter', 'tashkeel'] as SelectMode[]).map((m) => (
@@ -308,18 +325,21 @@ function App() {
             className="mobile-expand-btn"
             onClick={() => {
               setIsHeaderExpanded(prev => !prev);
-              setUserToggledHeader(true);
             }}
             aria-label={isHeaderExpanded ? "Collapse controls" : "Expand controls"}
           >
-            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '0.6', fontSize: '1rem', marginTop: isHeaderExpanded ? '4px' : '0' }}>
-              <span>{isHeaderExpanded ? '︽' : '︾'}</span>
-            </div>
+            <img 
+              src={darkMode 
+                ? (isHeaderExpanded ? chevronUpWhite : chevronDownWhite) 
+                : (isHeaderExpanded ? chevronUp : chevronDown)} 
+              alt={isHeaderExpanded ? "Collapse" : "Expand"} 
+              className="mobile-chevron-img"
+            />
           </button>
-
+          
           <button
             className="font-size-btn"
-            onClick={() => setFontSize(s => Math.min(2.5, s + 0.1))}
+            onClick={() => setFontSize(s => Math.min(4.5, s + 0.1))}
             title="Slightly larger text"
           >
             A⁺
@@ -345,6 +365,7 @@ function App() {
             <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', fontWeight: 600 }}>of 604</span>
           </div>
           <select
+            className="surah-select"
             value={currentSurah}
             onChange={e => {
               const targetSurah = parseInt(e.target.value, 10);
@@ -402,6 +423,7 @@ function App() {
           onMistakeClick={handleMistakeClick} activeMistakeId={activeMistake?.id}
           mobileOpen={sidebarOpen} onClose={() => setSidebarOpen(false)}
           showAllMistakes={showAllMistakes} onToggleShowAll={() => setShowAllMistakes(prev => !prev)}
+          width={sidebarWidth} onWidthChange={setSidebarWidth}
         />
       </main>
       <div className="mobile-mode-bar">

@@ -15,10 +15,15 @@
   --primary-color: #0ea5e9;
   --primary-hover: #0284c7;
 
-  --accent-ayah: rgba(14, 165, 233, 0.15);
-  --accent-word: rgba(34, 197, 94, 0.25);
-  --accent-letter: rgba(245, 158, 11, 0.35);
-  --accent-tashkeel: rgba(239, 68, 68, 0.5);
+  --accent-ayah: rgba(253, 224, 71, 0.45);
+  --accent-word: rgba(34, 197, 94, 0.4);
+  --accent-letter: rgba(59, 130, 246, 0.42);
+  --accent-tashkeel: rgba(239, 68, 68, 0.42);
+
+  --sidebar-ayah: #eab308;
+  --sidebar-word: #16a34a;
+  --sidebar-letter: #2563eb;
+  --sidebar-tashkeel: #dc2626;
 
   --danger-color: #ef4444;
   --border-color: #e5e7eb;
@@ -185,11 +190,28 @@ html.dark-mode .dark-mode-toggle:hover {
   border: 1px solid var(--border-color);
 }
 
-.font-label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  padding: 0 0.25rem;
+.font-size-input {
+  width: 2.8rem;
+  background: transparent;
+  border: none;
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  outline: none;
+  cursor: text;
+  padding: 0;
+}
+
+/* Hide spinners for font size input */
+.font-size-input::-webkit-inner-spin-button,
+.font-size-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.font-size-input {
+  -moz-appearance: textfield;
 }
 
 .main-content {
@@ -310,13 +332,16 @@ html.dark-mode .dark-mode-toggle:hover {
   vertical-align: middle;
   margin: 0 0.2rem;
   user-select: none;
+  background: none !important;
+  background-color: transparent !important;
+  border-radius: 0;
+  padding: 0;
 }
 
 /* Specific Mode Interactions */
 .quran-container.mode-ayah .ayah-hovered {
   cursor: pointer;
   background-color: var(--accent-ayah);
-  color: var(--primary-color);
   border-radius: 0.3rem;
   transition: all 0.1s;
 }
@@ -331,7 +356,6 @@ html.dark-mode .dark-mode-toggle:hover {
 
 .quran-container.mode-word .word:hover {
   background-color: var(--accent-word);
-  color: #065f46;
 }
 
 .quran-container.mode-letter .letter {
@@ -340,7 +364,6 @@ html.dark-mode .dark-mode-toggle:hover {
 
 .quran-container.mode-letter .letter:hover {
   background-color: var(--accent-letter);
-  color: #b45309;
 }
 
 .quran-container.mode-tashkeel .tashkeel {
@@ -349,7 +372,57 @@ html.dark-mode .dark-mode-toggle:hover {
 
 .quran-container.mode-tashkeel .tashkeel:hover {
   background-color: var(--accent-tashkeel);
-  color: var(--danger-color);
+}
+
+/* Specific Highlight Colors - Layered for contrast */
+.mistake-ayah {
+  background-color: var(--accent-ayah) !important;
+  color: #713f12 !important;
+  border-radius: 0.25rem;
+}
+
+.mistake-word {
+  background-color: #bbf7d0 !important;
+  /* Solid mint for visibility over yellow */
+  color: #14532d !important;
+  border-radius: 0.25rem;
+  z-index: 2;
+}
+
+.mistake-letter {
+  background-color: #bfdbfe !important;
+  /* Solid blue for visibility over green/yellow */
+  color: #1e3a8a !important;
+  border-radius: 0.25rem;
+  z-index: 3;
+}
+
+.mistake-tashkeel {
+  background-color: #fecaca !important;
+  /* Solid red for visibility over green/yellow */
+  color: #7f1d1d !important;
+  border-radius: 0.25rem;
+  z-index: 3;
+}
+
+html.dark-mode .mistake-ayah {
+  background-color: rgba(234, 179, 8, 0.5) !important;
+  color: #fef08a !important;
+}
+
+html.dark-mode .mistake-word {
+  background-color: rgba(34, 197, 94, 0.35) !important;
+  color: #86efac !important;
+}
+
+html.dark-mode .mistake-letter {
+  background-color: rgba(59, 130, 246, 0.35) !important;
+  color: #93c5fd !important;
+}
+
+html.dark-mode .mistake-tashkeel {
+  background-color: rgba(239, 68, 68, 0.35) !important;
+  color: #fca5a5 !important;
 }
 
 /* Pagination Bar */
@@ -458,7 +531,6 @@ html.dark-mode .dark-mode-toggle:hover {
 
 /* Sidebar Styling */
 .mistakes-sidebar {
-  width: 380px;
   background: var(--surface-color);
   border-left: 1px solid var(--border-color);
   display: flex;
@@ -467,6 +539,43 @@ html.dark-mode .dark-mode-toggle:hover {
   z-index: 5;
   height: 100%;
   overflow: hidden;
+  position: relative;
+}
+
+.sidebar-resizer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  cursor: ew-resize;
+  z-index: 20;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border-left: 2px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-resizer:hover,
+.mistakes-sidebar.resizing .sidebar-resizer {
+  border-left: 2px solid var(--primary-color);
+  background: rgba(13, 148, 136, 0.05);
+}
+
+.resizer-handle {
+  width: 4px;
+  color: var(--text-secondary);
+  opacity: 0.3;
+  transition: all 0.2s;
+  pointer-events: none;
+}
+
+.sidebar-resizer:hover .resizer-handle,
+.mistakes-sidebar.resizing .resizer-handle {
+  color: var(--primary-color);
+  opacity: 1;
+  transform: scaleY(1.2);
 }
 
 .mistakes-sidebar h2 {
@@ -526,9 +635,41 @@ html.dark-mode .dark-mode-toggle:hover {
 .mistake-mode {
   font-size: 0.75rem;
   font-weight: 700;
-  color: var(--primary-color);
   letter-spacing: 0.05em;
   text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.mistake-mode-ayah {
+  color: #854d0e;
+}
+
+.mistake-mode-word {
+  color: #15803d;
+}
+
+.mistake-mode-letter {
+  color: #1d4ed8;
+}
+
+.mistake-mode-tashkeel {
+  color: #b91c1c;
+}
+
+html.dark-mode .mistake-mode-ayah {
+  color: #fde68a;
+}
+
+html.dark-mode .mistake-mode-word {
+  color: #86efac;
+}
+
+html.dark-mode .mistake-mode-letter {
+  color: #93c5fd;
+}
+
+html.dark-mode .mistake-mode-tashkeel {
+  color: #fca5a5;
 }
 
 .mistake-delete-btn {
@@ -664,6 +805,15 @@ html.dark-mode .active-mistake {
   box-shadow: 0 4px 12px rgba(14, 165, 233, 0.2);
 }
 
+.ayah-hovered .ayah-end-marker {
+  color: var(--primary-color) !important;
+}
+
+.ayah-end-marker {
+  background: none !important;
+  background-color: transparent !important;
+}
+
 /* ─── Responsive ──────────────────────────────────────────── */
 
 /* Hamburger button — hidden on desktop */
@@ -708,6 +858,18 @@ html.dark-mode .active-mistake {
 /* ── Tablet / Medium Screens (≤1100px) ── */
 @media (max-width: 1100px) {
   .app-title span {
+    display: none;
+  }
+}
+
+/* ── Tablet / Large Mobile (≤1000px) ── */
+@media (max-width: 1000px) {
+  .app-header {
+    justify-content: center !important;
+  }
+
+  .app-title,
+  .logo-container {
     display: none;
   }
 }
@@ -780,7 +942,7 @@ html.dark-mode .active-mistake {
 /* ── Tablet (≤900px) ── */
 @media (max-width: 900px) {
   .mistakes-sidebar {
-    width: 280px;
+    /* Width controlled by inline style */
   }
 
   /* Shrink sidebar internals */
@@ -884,12 +1046,24 @@ html.dark-mode .active-mistake {
 
   .pagination-bar {
     transition: all 0.3s ease;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    grid-template-rows: repeat(2, minmax(2.6rem, auto));
+    align-items: center;
+    gap: 0.7rem 0.8rem;
+    padding: 0.6rem 1.25rem;
+  }
+
+  .pagination-bar .surah-select {
+    height: 3rem; /* Specifically increased height ONLY for Surah */
+    padding: 0.5rem 1.2rem;
+    font-size: 0.95rem;
+    font-weight: 600;
   }
 
   .pagination-bar.collapsed {
-    padding: 0.4rem 0.8rem;
     grid-template-rows: auto !important;
-    gap: 0.4rem;
+    padding: 0.45rem 1rem;
   }
 
   .pagination-bar.collapsed .page-inputs.hidden-mobile {
@@ -901,7 +1075,7 @@ html.dark-mode .active-mistake {
     align-items: center;
     gap: 0.8rem;
     grid-column: 2;
-    grid-row: 5;
+    grid-row: 2;
     justify-self: center;
     z-index: 10;
   }
@@ -938,14 +1112,19 @@ html.dark-mode .active-mistake {
     border-radius: 50%;
     width: 2.3rem;
     height: 2.3rem;
-    font-size: 1.1rem;
-    color: var(--primary-color);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
     cursor: pointer;
     margin: 0 auto;
     transition: all 0.2s;
+    padding: 0;
+    overflow: hidden;
   }
 
+  .mobile-chevron-img {
+    width: 1.2rem;
+    height: 1.2rem;
+    object-fit: contain;
+  }
   .mobile-expand-btn:active {
     transform: scale(0.92);
     background: var(--primary-color);
@@ -1089,23 +1268,15 @@ html.dark-mode .active-mistake {
     font-size: 1rem;
   }
 
-  /* Pagination: inputs row on top, nav buttons row below */
-  .pagination-bar {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    grid-template-rows: auto auto auto auto;
-    gap: 0.4rem;
-    padding: 0.4rem 0.8rem;
-    align-items: center;
-  }
+
 
   .pagination-bar>button:first-child {
-    grid-row: 5;
+    grid-row: 2;
     grid-column: 1;
   }
 
   .pagination-bar>button:last-child {
-    grid-row: 5;
+    grid-row: 2;
     grid-column: 3;
   }
 
