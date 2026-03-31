@@ -40,7 +40,7 @@ const MistakeCommentEditor = ({ mistake, onUpdate }: { mistake: MistakeEntry, on
             onChange={e => setText(e.target.value)} 
             autoFocus 
             rows={2} 
-            style={{ width:'100%', padding: '0.5rem', borderRadius: '0.25rem', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontFamily: 'inherit' }} 
+            style={{ width:'100%', padding: '0.5rem', borderRadius: '0.25rem', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontFamily: "'Montserrat', sans-serif" }} 
          />
          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
             <button onClick={handleSave} style={{ background: 'var(--primary-color)', color: 'white', border: 'none', padding: '0.2rem 0.6rem', borderRadius: '0.25rem', cursor: 'pointer', fontSize: '0.8rem' }}>Save</button>
@@ -76,59 +76,54 @@ export const MistakesSidebar = ({ mistakes, onClear, onDelete, onUpdateComment, 
   const [confirming, setConfirming] = useState(false);
   return (
     <div className={`mistakes-sidebar${mobileOpen ? ' mobile-open' : ''}`}>
-      {/* Mobile-only close row */}
-      <div className="sidebar-close-row">
-        <button className="sidebar-close-btn" onClick={onClose} aria-label="Close">✕ Close</button>
-      </div>
-      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem 2rem', borderBottom: '1px solid var(--border-color)', background: 'var(--surface-color)', backdropFilter: 'blur(10px)', zIndex: 10}}>
-        <h2 style={{padding: 0, border: 'none', background: 'transparent', color: 'var(--text-primary)'}}>Mistakes ({mistakes.length})</h2>
+      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.2rem 2rem', borderBottom: '1px solid var(--border-color)', background: 'transparent', zIndex: 10}}>
+        <h2 style={{padding: 0, border: 'none', background: 'transparent', color: 'var(--text-primary)', fontSize: '1.2rem'}}>Mistakes ({mistakes.length})</h2>
         {onClear && mistakes.length > 0 && (
           confirming ? (
             <div style={{display: 'flex', gap: '1rem'}}>
               <button 
                 onClick={() => { onClear(); setConfirming(false); }} 
-                style={{background: 'var(--danger-color)', border: 'none', color: 'white', padding: '0.2rem 0.8rem', borderRadius: '0.25rem', cursor: 'pointer', fontWeight: 600}}>Yes, Clear</button>
+                style={{background: 'var(--danger-color)', border: 'none', color: 'white', padding: '0.2rem 0.8rem', borderRadius: '0.25rem', cursor: 'pointer', fontWeight: 600}}>Yes</button>
               <button 
                 onClick={() => setConfirming(false)} 
-                style={{background: 'none', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', padding: '0.2rem 0.8rem', borderRadius: '0.25rem', cursor: 'pointer', fontWeight: 600}}>Cancel</button>
+                style={{background: 'none', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', padding: '0.2rem 0.8rem', borderRadius: '0.25rem', cursor: 'pointer', fontWeight: 600}}>No</button>
             </div>
           ) : (
             <button 
              onClick={() => setConfirming(true)} 
-             style={{background: 'none', border: 'none', color: 'var(--danger-color)', cursor: 'pointer', fontWeight: 600}}>Clear All</button>
+             style={{background: 'none', border: 'none', color: 'var(--danger-color)', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem'}}>Clear All</button>
           )
         )}
       </div>
       
-      {/* Show All Mistakes Toggle */}
       {mistakes.length > 0 && (
-         <div style={{ padding: '1rem 2rem', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--surface-color)' }}>
-            <label onClick={onToggleShowAll} style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)', cursor: 'pointer' }}>Show all mistakes</label>
+         <div style={{ padding: '0.8rem 2rem', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'transparent' }}>
+            <label onClick={onToggleShowAll} style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-primary)', cursor: 'pointer' }}>Show all mistakes</label>
             <div 
                onClick={onToggleShowAll}
                style={{ 
-                 width: '40px', height: '22px', background: showAllMistakes ? 'var(--primary-color)' : 'var(--border-color)', 
-                 borderRadius: '11px', position: 'relative', cursor: 'pointer', transition: 'background 0.2s'
+                 width: '36px', height: '20px', background: showAllMistakes ? 'var(--primary-color)' : 'var(--border-color)', 
+                 borderRadius: '10px', position: 'relative', cursor: 'pointer', transition: 'background 0.2s'
                }}
             >
                <div style={{
-                 position: 'absolute', top: '2px', left: showAllMistakes ? '20px' : '2px', 
-                 width: '18px', height: '18px', background: 'white', borderRadius: '50%',
-                 transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                 position: 'absolute', top: '2px', left: showAllMistakes ? '18px' : '2px', 
+                 width: '16px', height: '16px', background: 'white', borderRadius: '50%',
+                 transition: 'left 0.2s', boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
                }} />
             </div>
          </div>
       )}
 
-      <div className="mistakes-list">
-        {mistakes.map((mistake) => (
+      <div className="mistakes-list" style={{ flex: 1, overflowY: 'auto' }}>
+        {mistakes.map((mistake, i) => (
           <div 
              key={mistake.id} 
              className={`mistake-item ${activeMistakeId === mistake.id ? 'active' : ''}`}
              onClick={() => onMistakeClick?.(mistake)}
-             style={{ cursor: onMistakeClick ? 'pointer' : 'default', border: activeMistakeId === mistake.id ? '2px solid var(--primary-color)' : '1px solid var(--border-color)' }}
+             style={{ cursor: onMistakeClick ? 'pointer' : 'default', border: activeMistakeId === mistake.id ? '2px solid var(--primary-color)' : '1px solid var(--border-color)', margin: '0.8rem 1.5rem', borderRadius: '0.75rem' }}
           >
-            <div className="mistake-number">{mistake.number}</div>
+            <div className="mistake-number">{i + 1}</div>
             <div className="mistake-details">
               <span className="mistake-mode">{mistake.mode.toUpperCase()}</span>
               <span className="mistake-text">{mistake.text}</span>
@@ -140,8 +135,8 @@ export const MistakesSidebar = ({ mistakes, onClear, onDelete, onUpdateComment, 
             </div>
             {onDelete && (
               <button 
+                 className="mistake-delete-btn"
                  onClick={(e) => { e.stopPropagation(); onDelete(mistake.id); }} 
-                 style={{background: 'none', border: 'none', color: 'var(--danger-color)', cursor: 'pointer', fontSize: '1.4rem', padding: '0 0.5rem', opacity: 1, marginLeft: 'auto'}}
                  title="Delete mistake"
               >
                  ×
@@ -149,7 +144,11 @@ export const MistakesSidebar = ({ mistakes, onClear, onDelete, onUpdateComment, 
             )}
           </div>
         ))}
-        {mistakes.length === 0 && <p className="empty-state">No mistakes recorded yet.</p>}
+        {mistakes.length === 0 && <p className="empty-state" style={{ textAlign: 'center', marginTop: '3rem', color: 'var(--text-secondary)' }}>No mistakes recorded for this page.</p>}
+      </div>
+
+      <div className="sidebar-close-row">
+        <button className="sidebar-close-btn" onClick={onClose} aria-label="Close">✕ Close</button>
       </div>
     </div>
   );

@@ -34,9 +34,10 @@ interface QuranPageProps {
   pageMistakes?: MistakeEntry[];
   showAllMistakes?: boolean;
   onSurahLimitsChange?: (limits: { surah: number, limit: number }[]) => void;
+  fontSize?: number;
 }
 
-export const QuranPage = ({ mode, pageData, onMistake, activeMistake, pageMistakes, showAllMistakes, onSurahLimitsChange }: QuranPageProps) => {
+export const QuranPage = ({ mode, pageData, onMistake, activeMistake, pageMistakes, showAllMistakes, onSurahLimitsChange, fontSize = 1.35 }: QuranPageProps) => {
   const [hoveredAyah, setHoveredAyah] = useState<number | null>(null);
 
   const tokenizedLines = useMemo(() => {
@@ -119,7 +120,11 @@ export const QuranPage = ({ mode, pageData, onMistake, activeMistake, pageMistak
   };
 
   return (
-    <div className={`quran-container mode-${mode}`} onClick={handleClick}>
+    <div 
+      className={`quran-container mode-${mode}`} 
+      onClick={handleClick}
+      style={{ fontSize: `${fontSize}rem` }}
+    >
       {tokenizedLines.map((line, lIdx) => {
         // Determine surah for this line to help observer
         const lineSurah = line.surah_number || (line.words && line.words.length > 0 ? line.words[0].surah : null);

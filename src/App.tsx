@@ -3,6 +3,7 @@ import { QuranPage } from './components/QuranPage';
 import { MistakesSidebar } from './components/MistakesSidebar';
 import type { SelectMode, MistakeEntry } from './types';
 import quranDataJson from './data/quran_v2.json';
+import logo from './assets/faviconhifdhtoolcropped.png';
 import './App.css';
 
 const englishSurahNames = [
@@ -12,7 +13,7 @@ const englishSurahNames = [
 const quranData = quranDataJson as any[];
 
 const SURAH_AYAH_COUNTS = [
-  7,286,200,176,120,165,206,75,129,109,123,111,43,52,99,128,111,110,98,135,112,78,118,64,77,227,93,88,69,60,34,30,73,54,45,83,182,88,75,85,54,53,89,59,37,35,38,29,18,45,60,49,62,55,78,96,29,22,24,13,14,11,11,18,12,12,30,52,52,44,28,28,20,56,40,31,50,40,46,42,29,19,36,25,22,17,19,26,30,20,15,21,11,8,8,19,5,8,8,11,98,5,12,12,10,7,4,3,6,5,5,4,5,4,5,5,4,6,5,3,6,3,6,6,4,5,5,6,6,6,6,5
+  7, 286, 200, 176, 120, 165, 206, 75, 129, 109, 123, 111, 43, 52, 99, 128, 111, 110, 98, 135, 112, 78, 118, 64, 77, 227, 93, 88, 69, 60, 34, 30, 73, 54, 45, 83, 182, 88, 75, 85, 54, 53, 89, 59, 37, 35, 38, 29, 18, 45, 60, 49, 62, 55, 78, 96, 29, 22, 24, 13, 14, 11, 11, 18, 12, 12, 30, 52, 52, 44, 28, 28, 20, 56, 40, 31, 50, 40, 46, 42, 29, 19, 36, 25, 22, 17, 19, 26, 30, 20, 15, 21, 11, 8, 8, 19, 5, 8, 8, 11, 98, 5, 12, 12, 10, 7, 4, 3, 6, 5, 5, 4, 5, 4, 5, 5, 4, 6, 5, 3, 6, 3, 6, 6, 4, 5, 5, 6, 6, 6, 6, 5
 ];
 
 function App() {
@@ -21,37 +22,56 @@ function App() {
   const [scrollSurah, setScrollSurah] = useState<number>(1);
   const [surahLimits, setSurahLimits] = useState<{ surah: number, limit: number }[]>([]);
 
+  // Track if user manually toggled the header to override auto-scroll logic
+  const [isHeaderExpanded, setIsHeaderExpanded] = useState(true);
+  const [userToggledHeader, setUserToggledHeader] = useState(false);
+
   // Rigid scroll-based surah detection
   useEffect(() => {
     const wrapper = document.querySelector('.quran-wrapper');
-    if (!wrapper || surahLimits.length <= 1) return;
+    if (!wrapper) return;
 
     const handleScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = wrapper;
-      if (scrollHeight <= clientHeight) return;
-      const scrollPercent = scrollTop / (scrollHeight - clientHeight);
-      
-      let activeSurah = surahLimits[0].surah;
-      for (let i = 1; i < surahLimits.length; i++) {
-        if (scrollPercent >= surahLimits[i].limit) {
-          activeSurah = surahLimits[i].surah;
-        } else {
-          break;
+      // 1. Surah update logic
+      if (surahLimits.length > 1) {
+        const { scrollTop, scrollHeight, clientHeight } = wrapper;
+        if (scrollHeight > clientHeight) {
+          const scrollPercent = scrollTop / (scrollHeight - clientHeight);
+          let activeSurah = surahLimits[0].surah;
+          for (let i = 1; i < surahLimits.length; i++) {
+            if (scrollPercent >= surahLimits[i].limit) activeSurah = surahLimits[i].surah;
+            else break;
+          }
+          if (activeSurah !== scrollSurah) setScrollSurah(activeSurah);
         }
       }
-      if (activeSurah !== scrollSurah) setScrollSurah(activeSurah);
+
+      // 2. Mobile collapse logic
+      const isCurrentlyScrolled = wrapper.scrollTop > 50;
+
+      // ALWAYS auto-collapse on scroll down, even if manually expanded
+      if (isCurrentlyScrolled && isHeaderExpanded) {
+        setIsHeaderExpanded(false);
+        // We reset the manual toggle flag here because the scroll action takes precedence now
+        setUserToggledHeader(false);
+      }
+
+      // Scroll back to absolute top: reset everything
+      if (wrapper.scrollTop === 0) {
+        setUserToggledHeader(false);
+        // Note: we're still following your requirement to NOT auto-expand at top
+        // But we reset flags so the next scroll-down works fresh
+      }
     };
 
     wrapper.addEventListener('scroll', handleScroll, { passive: true });
     return () => wrapper.removeEventListener('scroll', handleScroll);
-  }, [surahLimits, scrollSurah]);
+  }, [surahLimits, scrollSurah, userToggledHeader]); // Removed isHeaderExpanded from deps to avoid loop
 
   // Keyboard shortcuts for modes: A, S, D, F
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't trigger if user is typing in the page number input
       if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName || '')) return;
-      
       switch (e.key.toLowerCase()) {
         case 'a': setMode('ayah'); break;
         case 's': setMode('word'); break;
@@ -59,7 +79,6 @@ function App() {
         case 'f': setMode('tashkeel'); break;
       }
     };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
@@ -76,6 +95,14 @@ function App() {
     return saved ? JSON.parse(saved) : [];
   });
   const [activeMistake, setActiveMistake] = useState<MistakeEntry | null>(null);
+  const [fontSize, setFontSize] = useState<number>(() => {
+    const saved = localStorage.getItem('quranFontSize');
+    return saved ? parseInt(saved, 10) : 1.35;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('quranFontSize', fontSize.toString());
+  }, [fontSize]);
 
   // Memos
   const surahMap = useMemo(() => {
@@ -157,15 +184,13 @@ function App() {
   }, [darkMode]);
 
   useEffect(() => {
-    if (!showAllMistakes) {
-      setActiveMistake(null);
-    }
+    if (!showAllMistakes) setActiveMistake(null);
   }, [showAllMistakes]);
 
   // Actions
   const handleMistake = (mistakeData: Omit<MistakeEntry, 'id' | 'number' | 'pageNumber'>) => {
     setMistakes(prev => {
-      const isDuplicate = prev.some(m => 
+      const isDuplicate = prev.some(m =>
         m.pageNumber === currentPage &&
         m.mode === mistakeData.mode &&
         m.surahNumber === mistakeData.surahNumber &&
@@ -193,13 +218,9 @@ function App() {
         selector = `[data-surah="${mistake.surahNumber}"][data-ayah="${mistake.ayahNumber}"]`;
       } else if (mistake.wordId !== undefined) {
         const wordSelector = `[data-word-id="${mistake.wordId}"]`;
-        if (mistake.mode === 'word') {
-          selector = wordSelector;
-        } else if (mistake.mode === 'letter' && mistake.letterIndex !== undefined) {
-          selector = `${wordSelector} [data-letter="${mistake.letterIndex}"]`;
-        } else if (mistake.mode === 'tashkeel' && mistake.tashkeelIndex !== undefined) {
-          selector = `${wordSelector} [data-tashkeel="${mistake.tashkeelIndex}"]`;
-        }
+        if (mistake.mode === 'word') selector = wordSelector;
+        else if (mistake.mode === 'letter' && mistake.letterIndex !== undefined) selector = `${wordSelector} [data-letter="${mistake.letterIndex}"]`;
+        else if (mistake.mode === 'tashkeel' && mistake.tashkeelIndex !== undefined) selector = `${wordSelector} [data-tashkeel="${mistake.tashkeelIndex}"]`;
       }
       if (selector) {
         const el = document.querySelector(selector);
@@ -211,10 +232,8 @@ function App() {
   const handleMistakeClick = (mistake: MistakeEntry) => {
     setActiveMistake(mistake);
     setMode(mistake.mode);
-    setSidebarOpen(false); 
+    setSidebarOpen(false);
     scrollToMistake(mistake);
-
-    // If "Show All" is disabled, clear the highlight after a delay
     if (!showAllMistakes) {
       setTimeout(() => {
         setActiveMistake(prev => (prev?.id === mistake.id ? null : prev));
@@ -238,46 +257,94 @@ function App() {
   }, [currentPage, currentSurah]);
 
   return (
-    <div className="app-layout">
-      <header className="app-header">
-        <h1>Quran Hifdh Tool</h1>
+    <div className={`app-layout ${!isHeaderExpanded ? 'mobile-collapsed' : ''}`}>
+      <header className={`app-header ${!isHeaderExpanded ? 'hidden-mobile' : ''}`}>
+        <h1
+          className="app-title"
+          onClick={() => {
+            setCurrentPage(1);
+            setScrollSurah(1);
+            const wrapper = document.querySelector('.quran-wrapper');
+            if (wrapper) wrapper.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          title="Go to Surah Fatihah (Page 1)"
+        >
+          <div className="logo-container">
+            <img src={logo} alt="Hifdh Tool Logo" className="header-logo-img" />
+            <span>Hifdh Tool</span>
+          </div>
+        </h1>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <button className="toggle-btn dark-mode-toggle" onClick={() => setDarkMode(!darkMode)}>
-            {darkMode ? '☀️ Light' : '🌙 Dark'}
-          </button>
+          <button className="toggle-btn dark-mode-toggle" onClick={() => setDarkMode(!darkMode)}>{darkMode ? '☀️ Light' : '🌙 Dark'}</button>
+          <div className="font-size-controls desktop-only">
+            <button className="font-size-btn-mini" onClick={() => setFontSize(s => Math.max(0.8, s - 0.1))}>ᴀ⁻</button>
+            <span className="font-label">Font</span>
+            <button className="font-size-btn-mini" onClick={() => setFontSize(s => Math.min(2.5, s + 0.1))}>A⁺</button>
+          </div>
           <div className="mode-toggles">
             {(['ayah', 'word', 'letter', 'tashkeel'] as SelectMode[]).map((m) => (
-              <button key={m} className={`toggle-btn ${mode === m ? 'active' : ''}`} onClick={() => setMode(m)}>
-                {m.charAt(0).toUpperCase() + m.slice(1)} Mode
-              </button>
+              <button key={m} className={`toggle-btn ${mode === m ? 'active' : ''}`} onClick={() => setMode(m)}>{m.charAt(0).toUpperCase() + m.slice(1)} Mode</button>
             ))}
           </div>
-          <button className="hamburger-btn" onClick={() => setSidebarOpen(o => !o)} aria-label="Toggle mistakes">
-            {sidebarOpen ? '✕' : '☰'}
-          </button>
         </div>
       </header>
-      
-      <div className="pagination-bar">
-        <button onClick={() => setCurrentPage(p => Math.min(604, p + 1))} disabled={currentPage === 604}>Next Page ◀</button>
-        <div className="page-inputs">
+
+      <div className={`pagination-bar ${!isHeaderExpanded ? 'collapsed' : ''}`}>
+        <button onClick={() => setCurrentPage(p => Math.min(604, p + 1))} disabled={currentPage === 604}>
+          <span className="desktop-only">◀ Next Page</span>
+          <span className="mobile-only">◀ Next</span>
+        </button>
+
+        <div className="mobile-center-controls mobile-only">
+          <button
+            className="font-size-btn"
+            onClick={() => setFontSize(s => Math.max(0.8, s - 0.1))}
+            title="Slightly smaller text"
+          >
+            ᴀ⁻
+          </button>
+
+          <button
+            className="mobile-expand-btn"
+            onClick={() => {
+              setIsHeaderExpanded(prev => !prev);
+              setUserToggledHeader(true);
+            }}
+            aria-label={isHeaderExpanded ? "Collapse controls" : "Expand controls"}
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '0.6', fontSize: '1rem', marginTop: isHeaderExpanded ? '4px' : '0' }}>
+              <span>{isHeaderExpanded ? '︽' : '︾'}</span>
+            </div>
+          </button>
+
+          <button
+            className="font-size-btn"
+            onClick={() => setFontSize(s => Math.min(2.5, s + 0.1))}
+            title="Slightly larger text"
+          >
+            A⁺
+          </button>
+        </div>
+
+        <div className={`page-inputs ${!isHeaderExpanded ? 'hidden-mobile' : ''}`}>
+          {/* ... inputs remain centered ... */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }} className="page-input-container">
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <span style={{ position: 'absolute', left: '0.6rem', fontSize: '0.85rem', pointerEvents: 'none', color: 'var(--text-secondary)', fontWeight: 600 }}>Page</span>
-              <input 
+              <input
                 type="number" min="1" max="604" value={inputPage} className="page-number-input"
                 style={{ paddingLeft: '3.2rem', width: '5.8rem' }}
                 onChange={e => {
                   setInputPage(e.target.value);
                   const val = parseInt(e.target.value, 10);
                   if (!isNaN(val) && val >= 1 && val <= 604) setCurrentPage(val);
-                }} 
+                }}
                 onBlur={() => setInputPage(currentPage.toString())}
               />
             </div>
             <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', fontWeight: 600 }}>of 604</span>
           </div>
-          <select 
+          <select
             value={currentSurah}
             onChange={e => {
               const targetSurah = parseInt(e.target.value, 10);
@@ -285,16 +352,12 @@ function App() {
               if (found) {
                 setCurrentPage(found.page);
                 const wordId = surahEntryWordMap.get(targetSurah);
-                if (wordId !== undefined) {
-                  scrollToMistake({ mode: 'word', surahNumber: targetSurah, ayahNumber: 1, wordId });
-                }
+                if (wordId !== undefined) scrollToMistake({ mode: 'word', surahNumber: targetSurah, ayahNumber: 1, wordId });
               }
             }}
           >
             <option hidden value={currentSurah}>{currentSurah}. {surahMap.find(s => s.surah === currentSurah)?.name}</option>
-            {surahMap.map((s, i) => (
-              <option key={i} value={s.surah}>{s.surah}. {s.name} (Page {s.page})</option>
-            ))}
+            {surahMap.map((s, i) => <option key={i} value={s.surah}>{s.surah}. {s.name} (Page {s.page})</option>)}
           </select>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }} className="ayah-input-container">
             <select
@@ -314,22 +377,27 @@ function App() {
             <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', fontWeight: 600 }}>of {totalAyahForCurrentSurah}</span>
           </div>
         </div>
-        <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>▶ Prev Page</button>
+
+        <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
+          <span className="desktop-only">Prev Page ▶</span>
+          <span className="mobile-only">Prev ▶</span>
+        </button>
       </div>
 
       <main className="main-content">
         <div className="quran-wrapper">
-          <QuranPage 
-            mode={mode} pageData={quranData[currentPage - 1] as any} 
+          <QuranPage
+            mode={mode} pageData={quranData[currentPage - 1] as any}
             onMistake={handleMistake} activeMistake={activeMistake}
             pageMistakes={mistakes.filter(m => m.pageNumber === currentPage)}
             showAllMistakes={showAllMistakes}
             onSurahLimitsChange={setSurahLimits}
+            fontSize={fontSize}
           />
         </div>
         {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
-        <MistakesSidebar 
-          mistakes={mistakes.filter(m => m.pageNumber === currentPage)} 
+        <MistakesSidebar
+          mistakes={mistakes.filter(m => m.pageNumber === currentPage)}
           onClear={handleClear} onDelete={handleDelete} onUpdateComment={handleUpdateComment}
           onMistakeClick={handleMistakeClick} activeMistakeId={activeMistake?.id}
           mobileOpen={sidebarOpen} onClose={() => setSidebarOpen(false)}
@@ -337,11 +405,19 @@ function App() {
         />
       </main>
       <div className="mobile-mode-bar">
-        {(['ayah', 'word', 'letter', 'tashkeel'] as SelectMode[]).map((m) => (
-          <button key={m} className={`mobile-mode-btn ${mode === m ? 'active' : ''}`} onClick={() => setMode(m)}>
-            {m.charAt(0).toUpperCase() + m.slice(1)}
-          </button>
-        ))}
+        <button className={`mobile-mode-btn ${mode === 'ayah' ? 'active' : ''}`} onClick={() => setMode('ayah')}>Ayah</button>
+        <button className={`mobile-mode-btn ${mode === 'word' ? 'active' : ''}`} onClick={() => setMode('word')}>Word</button>
+
+        <button
+          className={`mobile-hamburger-btn ${sidebarOpen ? 'active' : ''}`}
+          onClick={() => setSidebarOpen(o => !o)}
+          aria-label="Toggle mistakes"
+        >
+          {sidebarOpen ? '✕' : '☰'}
+        </button>
+
+        <button className={`mobile-mode-btn ${mode === 'letter' ? 'active' : ''}`} onClick={() => setMode('letter')}>Letter</button>
+        <button className={`mobile-mode-btn ${mode === 'tashkeel' ? 'active' : ''}`} onClick={() => setMode('tashkeel')}>Tashkeel</button>
       </div>
     </div>
   );
