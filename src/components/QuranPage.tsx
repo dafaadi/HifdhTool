@@ -33,9 +33,10 @@ interface QuranPageProps {
   activeMistake?: MistakeEntry | null;
   pageMistakes?: MistakeEntry[];
   showAllMistakes?: boolean;
+  onSurahLimitsChange?: (limits: { surah: number, limit: number }[]) => void;
 }
 
-export const QuranPage = ({ mode, pageData, onMistake, activeMistake, pageMistakes, showAllMistakes }: QuranPageProps) => {
+export const QuranPage = ({ mode, pageData, onMistake, activeMistake, pageMistakes, showAllMistakes, onSurahLimitsChange }: QuranPageProps) => {
   const [hoveredAyah, setHoveredAyah] = useState<number | null>(null);
 
   const tokenizedLines = useMemo(() => {
@@ -44,6 +45,42 @@ export const QuranPage = ({ mode, pageData, onMistake, activeMistake, pageMistak
       words: (line.words || []).map(w => ({ ...w, tokenized: tokenizeWord(w.text) }))
     }));
   }, [pageData]);
+
+  React.useEffect(() => {
+    if (!onSurahLimitsChange) return;
+
+    const computeLimits = () => {
+      const container = document.querySelector('.quran-container');
+      if (!container) return;
+      
+      const totalHeight = container.scrollHeight;
+      const lines = container.querySelectorAll('.quran-line[data-line-surah]');
+      
+      const limits: { surah: number, limit: number }[] = [];
+      const seenSurahs = new Set<number>();
+      
+      lines.forEach((line: any) => {
+        const surah = parseInt(line.getAttribute('data-line-surah'), 10);
+        if (!isNaN(surah) && !seenSurahs.has(surah)) {
+          seenSurahs.add(surah);
+          // Calculate the relative position from top
+          const offsetTop = line.offsetTop;
+          // Limit is the percentage of scroll height
+          limits.push({ surah, limit: offsetTop / totalHeight });
+        }
+      });
+      
+      onSurahLimitsChange(limits.sort((a, b) => a.limit - b.limit));
+    };
+
+    // Use a small delay to ensure DOM is ready after tokenization/inline-collapse
+    const timer = setTimeout(computeLimits, 150);
+    window.addEventListener('resize', computeLimits);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', computeLimits);
+    };
+  }, [pageData, onSurahLimitsChange, mode]);
 
   const handleClick = (e: MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
@@ -83,11 +120,16 @@ export const QuranPage = ({ mode, pageData, onMistake, activeMistake, pageMistak
 
   return (
     <div className={`quran-container mode-${mode}`} onClick={handleClick}>
-      {tokenizedLines.map((line, lIdx) => (
-        <div 
-          key={lIdx} 
-          className={`quran-line ${line.is_centered ? 'centered-line' : 'justified-line'}`}
-        >
+      {tokenizedLines.map((line, lIdx) => {
+        // Determine surah for this line to help observer
+        const lineSurah = line.surah_number || (line.words && line.words.length > 0 ? line.words[0].surah : null);
+        
+        return (
+          <div 
+            key={lIdx} 
+            className={`quran-line ${line.is_centered ? 'centered-line' : 'justified-line'}`}
+            data-line-surah={lineSurah}
+          >
           {line.line_type === 'surah_name' && (
             <div className="surah-name">{line.surah_name}</div>
           )}
@@ -165,7 +207,7 @@ export const QuranPage = ({ mode, pageData, onMistake, activeMistake, pageMistak
           {/* Ensure inter-line trailing spaces exist so inline-mode boundaries flow correctly without word glue */}
           {line.line_type === 'ayah' && <span className="word-space"> </span>}
         </div>
-      ))}
+      );})}
     </div>
   );
 };

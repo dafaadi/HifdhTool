@@ -152,23 +152,24 @@ body {
   width: 100%;
   text-align: center;
   font-family: inherit;
-  font-size: 1.6rem;
-  font-weight: bold;
-  padding: 0.8rem 0;
-  margin: 0.5rem 0;
-  color: #3f4751;
-  border: 2px solid rgba(0,0,0,0.05);
-  background: rgba(0,0,0,0.02);
-  border-radius: 6px;
+  font-size: 2.6rem;
+  font-weight: 700;
+  padding: 1.5rem 0;
+  margin: 1rem 0;
+  color: var(--primary-color);
+  border: 4px double var(--secondary-color);
+  background: rgba(var(--primary-color-rgb, 14, 165, 233), 0.05);
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
 .basmallah {
   width: 100%;
   text-align: center;
   font-family: 'UthmanicHafs', 'Noto Naskh Arabic', serif;
-  font-size: 1.8rem;
-  padding: 0.5rem 0;
-  margin-bottom: 0.5rem;
+  font-size: 2.2rem;
+  padding: 0.8rem 0;
+  margin-bottom: 0.8rem;
 }
 
 .ayah, .word, .letter, .tashkeel {
@@ -279,6 +280,11 @@ body {
   color: var(--text-color);
 }
 
+/* Hide number input spinners */
+.page-inputs input[type=number]::-webkit-inner-spin-button,
+.page-inputs input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.page-inputs input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+
 .page-inputs select {
   padding: 0.5rem;
   border: 1px solid var(--border-color);
@@ -286,6 +292,8 @@ body {
   max-width: 15rem;
   font-weight: 500;
   color: var(--text-color);
+  text-align: center;
+  text-align-last: center;
 }
 
 /* Sidebar Styling */
@@ -520,6 +528,30 @@ html.dark-mode .active-mistake {
   }
 }
 
+/* ── Tablet / Large Mobile (≤950px) ── */
+@media (max-width: 950px) {
+  .pagination-bar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 0.8rem;
+    padding: 0.8rem 1.5rem;
+  }
+  .pagination-bar .page-inputs {
+    grid-column: 1 / -1;
+    justify-content: center;
+    order: 1;
+  }
+  .pagination-bar > button:first-child {
+    grid-column: 1;
+    order: 2;
+  }
+  .pagination-bar > button:last-child {
+    grid-column: 2;
+    order: 2;
+  }
+}
+
 /* ── Tablet (≤900px) ── */
 @media (max-width: 900px) {
   .mistakes-sidebar { width: 280px; }
@@ -629,37 +661,46 @@ html.dark-mode .active-mistake {
 
   /* Pagination: inputs row on top, nav buttons row below */
   .pagination-bar {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 0.5rem 0.75rem;
-    gap: 0.4rem;
-  }
-  .pagination-bar .page-inputs {
-    order: 1;
-    justify-content: center;
-  }
-  .pagination-bar > button:first-child {
-    order: 2;
-  }
-  .pagination-bar > button:last-child {
-    order: 2;
-  }
-  /* Put both nav buttons in a flex row */
-  .pagination-bar {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto auto;
-    gap: 0.4rem;
+    grid-template-rows: auto auto auto auto; /* Enough rows for stacked inputs */
+    gap: 0.6rem;
+    padding: 0.6rem 0.8rem;
   }
   .pagination-bar .page-inputs {
     grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Two equal columns for Page/Ayah */
+    gap: 0.8rem;
+    order: 1;
+    align-items: stretch;
+  }
+  .page-inputs select:nth-child(2) { /* Surah select */
+    grid-column: 1 / -1; /* Surah on its own row */
+    order: 1;
+  }
+  .page-input-container {
+    grid-column: 1;
+    order: 2;
     justify-content: center;
   }
+  .ayah-input-container {
+    grid-column: 2;
+    order: 2;
+    justify-content: center;
+  }
+  .page-inputs select {
+    max-width: none;
+  }
   .pagination-bar > button:first-child {
+    grid-row: 5; /* Place buttons after stacked inputs */
     grid-column: 1;
+    order: 2;
   }
   .pagination-bar > button:last-child {
+    grid-row: 5;
     grid-column: 2;
+    order: 2;
   }
 
   /* Close row — shown on mobile */
