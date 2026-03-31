@@ -9,6 +9,8 @@ export interface MistakesSidebarProps {
   onMistakeClick?: (mistake: MistakeEntry) => void;
   activeMistakeId?: string | null;
   mobileOpen?: boolean;
+  showAllMistakes?: boolean;
+  onToggleShowAll?: () => void;
 }
 
 const MistakeCommentEditor = ({ mistake, onUpdate }: { mistake: MistakeEntry, onUpdate?: (id: string, c: string | undefined) => void }) => {
@@ -70,7 +72,7 @@ const MistakeCommentEditor = ({ mistake, onUpdate }: { mistake: MistakeEntry, on
   );
 };
 
-export const MistakesSidebar = ({ mistakes, onClear, onDelete, onUpdateComment, onMistakeClick, activeMistakeId, mobileOpen, onClose }: MistakesSidebarProps & { onClose?: () => void }) => {
+export const MistakesSidebar = ({ mistakes, onClear, onDelete, onUpdateComment, onMistakeClick, activeMistakeId, mobileOpen, onClose, showAllMistakes, onToggleShowAll }: MistakesSidebarProps & { onClose?: () => void }) => {
   const [confirming, setConfirming] = useState(false);
   return (
     <div className={`mistakes-sidebar${mobileOpen ? ' mobile-open' : ''}`}>
@@ -97,6 +99,27 @@ export const MistakesSidebar = ({ mistakes, onClear, onDelete, onUpdateComment, 
           )
         )}
       </div>
+      
+      {/* Show All Mistakes Toggle */}
+      {mistakes.length > 0 && (
+         <div style={{ padding: '1rem 2rem', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--surface-color)' }}>
+            <label onClick={onToggleShowAll} style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)', cursor: 'pointer' }}>Show all mistakes</label>
+            <div 
+               onClick={onToggleShowAll}
+               style={{ 
+                 width: '40px', height: '22px', background: showAllMistakes ? 'var(--primary-color)' : 'var(--border-color)', 
+                 borderRadius: '11px', position: 'relative', cursor: 'pointer', transition: 'background 0.2s'
+               }}
+            >
+               <div style={{
+                 position: 'absolute', top: '2px', left: showAllMistakes ? '20px' : '2px', 
+                 width: '18px', height: '18px', background: 'white', borderRadius: '50%',
+                 transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+               }} />
+            </div>
+         </div>
+      )}
+
       <div className="mistakes-list">
         {mistakes.map((mistake) => (
           <div 

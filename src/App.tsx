@@ -15,6 +15,7 @@ function App() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [mode, setMode] = useState<SelectMode>('ayah');
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
+  const [showAllMistakes, setShowAllMistakes] = useState<boolean>(false);
   const [mistakes, setMistakes] = useState<MistakeEntry[]>(() => {
     const saved = localStorage.getItem('quranMistakes');
     return saved ? JSON.parse(saved) : [];
@@ -182,6 +183,8 @@ function App() {
             pageData={quranData[currentPage - 1] as any} 
             onMistake={handleMistake} 
             activeMistake={activeMistake}
+            pageMistakes={mistakes.filter(m => m.pageNumber === currentPage)}
+            showAllMistakes={showAllMistakes}
           />
         </div>
         {/* Overlay — tapping outside closes sidebar on mobile */}
@@ -195,6 +198,8 @@ function App() {
           activeMistakeId={activeMistake?.id}
           mobileOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
+          showAllMistakes={showAllMistakes}
+          onToggleShowAll={() => setShowAllMistakes(prev => !prev)}
         />
       </main>
       {/* Mobile bottom mode bar — hidden on desktop via CSS */}

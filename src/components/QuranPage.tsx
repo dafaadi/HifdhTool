@@ -31,9 +31,11 @@ interface QuranPageProps {
   pageData: PageData;
   onMistake: (mistake: Omit<MistakeEntry, 'id' | 'number' | 'pageNumber'>) => void;
   activeMistake?: MistakeEntry | null;
+  pageMistakes?: MistakeEntry[];
+  showAllMistakes?: boolean;
 }
 
-export const QuranPage = ({ mode, pageData, onMistake, activeMistake }: QuranPageProps) => {
+export const QuranPage = ({ mode, pageData, onMistake, activeMistake, pageMistakes, showAllMistakes }: QuranPageProps) => {
   const [hoveredAyah, setHoveredAyah] = useState<number | null>(null);
 
   const tokenizedLines = useMemo(() => {
@@ -93,10 +95,25 @@ export const QuranPage = ({ mode, pageData, onMistake, activeMistake }: QuranPag
             <div className="basmallah">بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</div>
           )}
           {line.line_type === 'ayah' && line.words.map((word, wIdx) => {
-            const isWordActive = activeMistake && 
+            const isActiveFromClick = activeMistake && 
                                  activeMistake.surahNumber === word.surah &&
                                  activeMistake.ayahNumber === word.ayah && 
                                  (activeMistake.mode === 'ayah' || (activeMistake.mode === 'word' && activeMistake.wordIndex === word.wordIndex));
+
+            const isActiveFromShowAll = showAllMistakes && pageMistakes?.some(m => 
+                                 m.surahNumber === word.surah &&
+                                 m.ayahNumber === word.ayah && 
+                                 (m.mode === 'ayah' || (m.mode === 'word' && m.wordIndex === word.wordIndex))
+            );
+
+            const isWordActive = isActiveFromClick || isActiveFromShowAll;
+            
+            const hasSubwordMistake = showAllMistakes && pageMistakes?.some(m => 
+                                 (m.mode === 'letter' || m.mode === 'tashkeel') && 
+                                 m.surahNumber === word.surah && 
+                                 m.ayahNumber === word.ayah && 
+                                 m.wordIndex === word.wordIndex
+            );
             
             if (word.isEndOfAyah) {
               return (
@@ -125,11 +142,18 @@ export const QuranPage = ({ mode, pageData, onMistake, activeMistake }: QuranPag
                   onMouseLeave={() => mode === 'ayah' && setHoveredAyah(null)}
                 >
                   <span className={`word ${isWordActive ? 'active-mistake' : ''}`} data-ayah={word.ayah} data-surah={word.surah} data-word={word.wordIndex} data-word-id={word.id} data-text={word.text}>
-                  {mode === 'word' || mode === 'ayah' ? word.text : word.tokenized.letters.map(letter => {
-                    const isLetterActive = activeMistake?.mode === 'letter' && activeMistake.surahNumber === word.surah && activeMistake.ayahNumber === word.ayah && activeMistake.wordIndex === word.wordIndex && activeMistake.letterIndex === letter.index;
-                    const isTashkeelActive = activeMistake?.mode === 'tashkeel' && activeMistake.surahNumber === word.surah && activeMistake.ayahNumber === word.ayah && activeMistake.wordIndex === word.wordIndex && activeMistake.tashkeelIndex === letter.index;
+                  {((mode === 'word' || mode === 'ayah') && !hasSubwordMistake) ? word.text : word.tokenized.letters.map(letter => {
+                    const isLetterActiveFromClick = activeMistake?.mode === 'letter' && activeMistake.surahNumber === word.surah && activeMistake.ayahNumber === word.ayah && activeMistake.wordIndex === word.wordIndex && activeMistake.letterIndex === letter.index;
+                    const isTashkeelActiveFromClick = activeMistake?.mode === 'tashkeel' && activeMistake.surahNumber === word.surah && activeMistake.ayahNumber === word.ayah && activeMistake.wordIndex === word.wordIndex && activeMistake.tashkeelIndex === letter.index;
+                    
+                    const isLetterActiveFromShowAll = showAllMistakes && pageMistakes?.some(m => m.mode === 'letter' && m.surahNumber === word.surah && m.ayahNumber === word.ayah && m.wordIndex === word.wordIndex && m.letterIndex === letter.index);
+                    const isTashkeelActiveFromShowAll = showAllMistakes && pageMistakes?.some(m => m.mode === 'tashkeel' && m.surahNumber === word.surah && m.ayahNumber === word.ayah && m.wordIndex === word.wordIndex && m.tashkeelIndex === letter.index);
+
+                    const finalLetterActive = isLetterActiveFromClick || isLetterActiveFromShowAll;
+                    const finalTashkeelActive = isTashkeelActiveFromClick || isTashkeelActiveFromShowAll;
+
                     return (
-                      <span key={letter.index} className={`letter tashkeel ${isLetterActive || isTashkeelActive ? 'active-mistake' : ''}`} data-ayah={word.ayah} data-surah={word.surah} data-word-id={word.id} data-word={word.wordIndex} data-letter={letter.index} data-tashkeel={letter.index} data-text={letter.char}>{letter.char}</span>
+                      <span key={letter.index} className={`letter tashkeel ${finalLetterActive || finalTashkeelActive ? 'active-mistake' : ''}`} data-ayah={word.ayah} data-surah={word.surah} data-word-id={word.id} data-word={word.wordIndex} data-letter={letter.index} data-tashkeel={letter.index} data-text={letter.char}>{letter.char}</span>
                     );
                   })}
                 </span>
