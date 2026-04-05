@@ -7,6 +7,13 @@
   unicode-range: U+0600-06FF, U+0610-061A, U+064B-065F, U+0670, U+06D6-06ED, U+FE70-FEFF;
 }
 
+@font-face {
+  font-family: 'DigitalKhattIndoPak';
+  src: url('./assets/DigitalKhattIndoPak.otf') format('opentype');
+  font-display: block;
+  unicode-range: U+0600-06FF, U+0610-061A, U+064B-065F, U+0670, U+06D6-06ED, U+FE70-FEFF;
+}
+
 :root {
   --bg-color: #e5e7eb;
   --surface-color: #ffffff;
@@ -82,7 +89,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  z-index: 10;
+  z-index: 100;
 }
 
 .app-title {
@@ -222,7 +229,9 @@ html.dark-mode .dark-mode-toggle:hover {
 
 .quran-wrapper {
   flex: 1;
+  min-width: 0;
   overflow-y: auto;
+  overflow-x: auto;
   padding: 2.5rem;
   display: flex;
   justify-content: center;
@@ -233,13 +242,13 @@ html.dark-mode .dark-mode-toggle:hover {
 /* Quran Page Setup */
 .quran-container {
   width: max-content;
-  min-width: min(100%, 900px);
+  min-width: min(100%, 60ch);
   max-width: none;
   margin: 0 auto;
   height: fit-content;
   direction: rtl;
   text-align: justify;
-  font-family: 'UthmanicHafs', 'Noto Naskh Arabic', serif;
+  font-family: inherit;
   font-size: 2.8rem;
   line-height: 2.3;
   color: #1a1a1a;
@@ -247,8 +256,17 @@ html.dark-mode .dark-mode-toggle:hover {
   background: #ffffff;
   border-radius: 1rem;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+  user-select: text;
   word-break: normal;
   overflow-wrap: break-word;
+}
+
+.mushaf-madani {
+  font-family: 'UthmanicHafs', serif;
+}
+
+.mushaf-indopak {
+  font-family: 'DigitalKhattIndoPak', 'UthmanicHafs', serif;
 }
 
 .quran-line {
@@ -258,6 +276,11 @@ html.dark-mode .dark-mode-toggle:hover {
   line-height: 2.3;
   direction: rtl;
   white-space: nowrap;
+}
+
+.mushaf-indopak .quran-line {
+  width: max-content;
+  margin: 0 auto;
 }
 
 .centered-line {
@@ -288,7 +311,7 @@ html.dark-mode .dark-mode-toggle:hover {
 .basmallah {
   width: 100%;
   text-align: center;
-  font-family: 'UthmanicHafs', 'Noto Naskh Arabic', serif;
+  /* font-family will be inherited from the container */
   font-size: 2.2rem;
   padding: 0.8rem 0;
   margin-bottom: 0.8rem;
@@ -301,6 +324,16 @@ html.dark-mode .dark-mode-toggle:hover {
   transition: background-color 0.15s ease-out, color 0.15s ease-out;
   border-radius: 0.25rem;
   display: inline;
+}
+
+.mushaf-madani .word-space {
+  display: inline;
+  font-size: 0.5em;
+}
+
+.mushaf-indopak .word-space {
+  display: inline;
+  font-size: 0.3em; /* Slightly smaller spacing for indopak usually */
 }
 
 .ayah {
@@ -324,7 +357,8 @@ html.dark-mode .dark-mode-toggle:hover {
 }
 
 .ayah-end-marker {
-  font-family: 'UthmanicHafs', serif;
+  /* inherit from container instead of hardcoding UthmanicHafs */
+  font-family: inherit;
   font-size: clamp(2rem, 1.15em, 3.2rem);
   line-height: 1;
   color: var(--primary-color);
@@ -702,7 +736,7 @@ html.dark-mode .mistake-delete-btn:hover {
 }
 
 .mistake-text {
-  font-family: 'UthmanicHafs', 'Noto Naskh Arabic', serif;
+  font-family: inherit;
   font-size: 1.75rem;
   direction: rtl;
   color: var(--text-primary);

@@ -10,6 +10,8 @@ export interface WordData {
   surah: number;
   wordIndex: number;
   isEndOfAyah?: boolean;
+  ayahMarkerText?: string;
+  ayahMarkerExtra?: string;
 }
 
 export interface LineData {
@@ -35,9 +37,10 @@ interface QuranPageProps {
   showAllMistakes?: boolean;
   onSurahLimitsChange?: (limits: { surah: number, limit: number }[]) => void;
   fontSize?: number;
+  wordSpacing?: number;
 }
 
-export const QuranPage = ({ mode, pageData, onMistake, activeMistake, pageMistakes, showAllMistakes, onSurahLimitsChange, fontSize = 1.35 }: QuranPageProps) => {
+export const QuranPage = ({ mode, pageData, onMistake, activeMistake, pageMistakes, showAllMistakes, onSurahLimitsChange, fontSize = 1.35, wordSpacing = 0 }: QuranPageProps) => {
   const [hoveredAyah, setHoveredAyah] = useState<number | null>(null);
 
   const tokenizedLines = useMemo(() => {
@@ -123,7 +126,7 @@ export const QuranPage = ({ mode, pageData, onMistake, activeMistake, pageMistak
     <div 
       className={`quran-container mode-${mode}`} 
       onClick={handleClick}
-      style={{ fontSize: `${fontSize}rem` }}
+      style={{ fontSize: `${fontSize}rem`, wordSpacing: `${wordSpacing}em` }}
     >
       {tokenizedLines.map((line, lIdx) => {
         // Determine surah for this line to help observer
@@ -161,17 +164,40 @@ export const QuranPage = ({ mode, pageData, onMistake, activeMistake, pageMistak
             );
             
             if (word.isEndOfAyah) {
+              let mainAyahText = word.ayahMarkerText || word.text;
+              let extraChars = word.ayahMarkerExtra || '';
+
               return (
                 <React.Fragment key={word.id}>
                   <span 
                     className={`ayah-part ayah ${mode === 'ayah' && hoveredAyah === word.ayah ? 'ayah-hovered' : ''}`}
                     data-ayah={word.ayah} 
                     data-surah={word.surah} 
-                    data-text={word.text}
                     onMouseEnter={() => mode === 'ayah' && setHoveredAyah(word.ayah)}
                     onMouseLeave={() => mode === 'ayah' && setHoveredAyah(null)}
                   >
-                    <span className="ayah-end-marker" data-ayah={word.ayah} data-surah={word.surah} data-text={word.text}>{word.text}</span>
+                    <span 
+                      className="ayah-end-marker" 
+                      data-ayah={word.ayah} 
+                      data-surah={word.surah} 
+                      style={{ background: 'none !important', position: 'relative', display: 'inline-block' }}
+                    >
+                      <span>{mainAyahText}</span>
+                      {extraChars && (
+                        <span style={{ 
+                          position: 'absolute', 
+                          top: '-0.45em', 
+                          left: 0, 
+                          right: 0, 
+                          textAlign: 'center', 
+                          fontSize: '0.7em',
+                          color: 'inherit',
+                          pointerEvents: 'none'
+                        }}>
+                          {'\u00A0' + extraChars}
+                        </span>
+                      )}
+                    </span>
                   </span>
                   {wIdx < line.words.length - 1 && <span className="word-space"> </span>}
                 </React.Fragment>
