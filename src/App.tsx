@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { QuranPage } from './components/QuranPage';
 import { MistakesSidebar } from './components/MistakesSidebar';
 import type { SelectMode, MistakeEntry } from './types';
@@ -39,18 +39,16 @@ function App() {
     if (!wrapper) return;
 
     const handleScroll = () => {
-      // Surah update logic
-      if (surahLimits.length > 1) {
-        const { scrollTop, scrollHeight, clientHeight } = wrapper;
-        if (scrollHeight > clientHeight) {
-          const scrollPercent = scrollTop / (scrollHeight - clientHeight);
-          let activeSurah = surahLimits[0].surah;
-          for (let i = 1; i < surahLimits.length; i++) {
-            if (scrollPercent >= surahLimits[i].limit) activeSurah = surahLimits[i].surah;
-            else break;
-          }
-          if (activeSurah !== scrollSurah) setScrollSurah(activeSurah);
+      if (surahLimits.length > 0) {
+        const { scrollTop, clientHeight } = wrapper;
+        // What is at ~30% of the currently visible screen?
+        const targetY = scrollTop + (clientHeight * 0.3);
+        let activeSurah = surahLimits[0].surah;
+        for (let i = 1; i < surahLimits.length; i++) {
+          if (targetY >= surahLimits[i].limit) activeSurah = surahLimits[i].surah;
+          else break;
         }
+        if (activeSurah !== scrollSurah) setScrollSurah(activeSurah);
       }
     };
 
@@ -168,9 +166,12 @@ function App() {
   }, [wordSpacing]);
 
   // Memos
-  const surahMap = useMemo(() => {
+  const { surahMap, searchIndex } = useMemo(() => {
     const map: { page: number, surah: number, name: string }[] = [];
-    if (!quranData) return map;
+    const index = new Map<string, { page: number, surah: number, name: string }[]>();
+    
+    if (!quranData) return { surahMap: map, searchIndex: index };
+    
     quranData.forEach((page: any) => {
       page.lines.forEach((line: any) => {
         if (line.line_type === 'surah_name' && line.surah_name) {
@@ -178,7 +179,35 @@ function App() {
         }
       });
     });
-    return map;
+
+    map.forEach(s => {
+      const tokens = new Set<string>();
+      const normalized = s.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+      tokens.add(normalized);
+      
+      if (s.name.includes('-')) {
+        const noPrefix = s.name.substring(s.name.indexOf('-') + 1).toLowerCase().replace(/[^a-z0-9]/g, '');
+        tokens.add(noPrefix);
+      }
+      if (s.name.includes(' ')) {
+        const afterSpace = s.name.substring(s.name.indexOf(' ') + 1).toLowerCase().replace(/[^a-z0-9]/g, '');
+        tokens.add(afterSpace);
+      }
+      tokens.add(s.surah.toString());
+
+      tokens.forEach(token => {
+        for (let i = 1; i <= token.length; i++) {
+          const prefix = token.substring(0, i);
+          if (!index.has(prefix)) index.set(prefix, []);
+          const list = index.get(prefix)!;
+          if (!list.length || list[list.length - 1].surah !== s.surah) {
+            list.push(s);
+          }
+        }
+      });
+    });
+
+    return { surahMap: map, searchIndex: index };
   }, [quranData]);
 
   const surahEntryWordMap = useMemo(() => {
@@ -217,7 +246,11 @@ function App() {
     return map;
   }, [quranData]);
 
-  // Effects
+  const [surahSearch, setSurahSearch] = useState('');
+  const [surahDropdownOpen, setSurahDropdownOpen] = useState(false);
+  const [isPristineSearch, setIsPristineSearch] = useState(true);
+  const surahListRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     setInputPage(currentPage.toString());
     if (quranData && quranData[currentPage - 1]) {
@@ -233,7 +266,29 @@ function App() {
         }
       }
     }
-  }, [currentPage]);
+  }, [currentPage, quranData]);
+
+  useEffect(() => {
+    if (!surahDropdownOpen) {
+      const s = surahMap.find(sm => sm.surah === scrollSurah);
+      if (s) setSurahSearch(`${s.surah}. ${s.name}`);
+    } else {
+      setTimeout(() => {
+        const activeEl = surahListRef.current?.querySelector('.surah-active');
+        if (activeEl) {
+          activeEl.scrollIntoView({ block: 'center' });
+        }
+      }, 10);
+    }
+  }, [scrollSurah, surahDropdownOpen, surahMap]);
+
+  const filteredSurahs = useMemo(() => {
+    if (!surahDropdownOpen) return surahMap; // Only compute when open
+    if (isPristineSearch) return surahMap; // Show all until user actually types
+    const query = surahSearch.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (!query) return surahMap;
+    return searchIndex.get(query) || [];
+  }, [surahSearch, surahMap, searchIndex, surahDropdownOpen, isPristineSearch]);
 
   useEffect(() => {
     localStorage.setItem('quranMistakes', JSON.stringify(mistakes));
@@ -378,42 +433,85 @@ function App() {
               <Settings size={20} />
             </button>
             {showSettings && (
-              <div className="settings-dropdown" style={{
-                position: 'absolute', top: 'calc(100% + 0.5rem)', right: '0', background: 'var(--surface-color)', 
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)', 
-                borderRadius: '0.5rem', padding: '0.5rem', zIndex: 100, minWidth: '180px',
-                border: '1px solid var(--border-color)',
-                textAlign: 'left'
-              }}>
-                <div style={{ fontSize: '0.85rem', fontWeight: 600, padding: '0.5rem', color: 'var(--text-secondary)' }}>Mushaf Type</div>
-                <div className={`settings-option ${mushafType === 'madani' ? 'active' : ''}`} style={{ padding: '0.5rem', cursor: 'pointer', borderRadius: '0.25rem', backgroundColor: mushafType === 'madani' ? 'var(--accent-letter)' : 'transparent' }} onClick={() => { setMushafType('madani'); setShowSettings(false); setCurrentPage(1); }}>
-                  Uthmanic (Hafs)
-                </div>
-                <div className={`settings-option ${mushafType === 'indopak' ? 'active' : ''}`} style={{ padding: '0.5rem', cursor: 'pointer', borderRadius: '0.25rem', backgroundColor: mushafType === 'indopak' ? 'var(--accent-letter)' : 'transparent' }} onClick={() => { setMushafType('indopak'); setShowSettings(false); setCurrentPage(1); }}>
-                  IndoPak (15-line)
-                </div>
-                {mushafType === 'indopak' && (
-                  <div style={{ padding: '0.5rem', color: 'var(--text-secondary)', borderTop: '1px solid var(--border-color)', marginTop: '0.5rem' }}>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.25rem', display: 'flex', justifyContent: 'space-between' }}>
-                      <span>Word Spacing</span>
-                      <span>{wordSpacing.toFixed(2)}em</span>
-                    </div>
-                    <input type="range" min="-0.2" max="1" step="0.05" value={wordSpacing} onChange={e => setWordSpacing(parseFloat(e.target.value))} style={{ width: '100%', cursor: 'pointer' }} />
+              <>
+                {/* Desktop Dropdown - Hidden on Mobile via CSS */}
+                <div className="settings-dropdown desktop-settings-menu">
+                  <div style={{ fontSize: '0.85rem', fontWeight: 600, padding: '0.5rem', color: 'var(--text-secondary)' }}>Mushaf Type</div>
+                  <div className={`settings-option ${mushafType === 'madani' ? 'active' : ''}`} style={{ padding: '0.5rem', cursor: 'pointer', borderRadius: '0.25rem', backgroundColor: mushafType === 'madani' ? 'var(--accent-letter)' : 'transparent' }} onClick={() => { setMushafType('madani'); setShowSettings(false); setCurrentPage(1); }}>
+                    Uthmanic (Hafs)
                   </div>
-                )}
-                <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border-color)' }}>
-                  <button className="dark-mode-toggle" style={{ width: '100%', justifyContent: 'center', padding: '0.5rem', borderRadius: '0.25rem' }} onClick={() => { setDarkMode(!darkMode); setShowSettings(false); }}>
-                    {darkMode ? '☀️ Light Mode' : '🌙 Dark Mode'}
-                  </button>
+                  <div className={`settings-option ${mushafType === 'indopak' ? 'active' : ''}`} style={{ padding: '0.5rem', cursor: 'pointer', borderRadius: '0.25rem', backgroundColor: mushafType === 'indopak' ? 'var(--accent-letter)' : 'transparent' }} onClick={() => { setMushafType('indopak'); setShowSettings(false); setCurrentPage(1); }}>
+                    IndoPak (15-line)
+                  </div>
+                  {mushafType === 'indopak' && (
+                    <div style={{ padding: '0.5rem', color: 'var(--text-secondary)', borderTop: '1px solid var(--border-color)', marginTop: '0.5rem' }}>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.25rem', display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Word Spacing</span>
+                        <span>{wordSpacing.toFixed(2)}em</span>
+                      </div>
+                      <input type="range" min="-0.2" max="1" step="0.05" value={wordSpacing} onChange={e => setWordSpacing(parseFloat(e.target.value))} style={{ width: '100%', cursor: 'pointer' }} />
+                    </div>
+                  )}
+                  <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border-color)' }}>
+                    <button className="dark-mode-toggle" style={{ width: '100%', justifyContent: 'center', padding: '0.5rem', borderRadius: '0.25rem' }} onClick={() => { setDarkMode(!darkMode); setShowSettings(false); }}>
+                      {darkMode ? '☀️ Light Mode' : '🌙 Dark Mode'}
+                    </button>
+                  </div>
                 </div>
-              </div>
+
+                {/* Mobile Modal - Hidden on Desktop via CSS */}
+                <div className="settings-modal-overlay mobile-settings-menu" onClick={() => setShowSettings(false)}>
+                  <div className="settings-modal-content" onClick={e => e.stopPropagation()}>
+                    <div className="modal-header">
+                      <h3>Settings</h3>
+                      <button className="modal-close" onClick={() => setShowSettings(false)}>✕</button>
+                    </div>
+                    
+                    <div className="modal-body">
+                      <div className="modal-section">
+                        <label>Mushaf Type</label>
+                        <div className="modal-options">
+                          <button 
+                            className={`modal-opt-btn ${mushafType === 'madani' ? 'active' : ''}`} 
+                            onClick={() => { setMushafType('madani'); setShowSettings(false); setCurrentPage(1); }}
+                          >
+                            Uthmanic (Hafs)
+                          </button>
+                          <button 
+                            className={`modal-opt-btn ${mushafType === 'indopak' ? 'active' : ''}`} 
+                            onClick={() => { setMushafType('indopak'); setShowSettings(false); setCurrentPage(1); }}
+                          >
+                            IndoPak (15-line)
+                          </button>
+                        </div>
+                      </div>
+
+                      {mushafType === 'indopak' && (
+                        <div className="modal-section">
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                            <label>Word Spacing</label>
+                            <span className="val-badge">{wordSpacing.toFixed(2)}em</span>
+                          </div>
+                          <input type="range" min="-0.2" max="1" step="0.05" value={wordSpacing} onChange={e => setWordSpacing(parseFloat(e.target.value))} style={{ width: '100%', cursor: 'pointer' }} />
+                        </div>
+                      )}
+
+                      <div className="modal-section">
+                         <button className="modal-toggle-btn" onClick={() => { setDarkMode(!darkMode); setShowSettings(false); }}>
+                          {darkMode ? '☀️ Switch to Light Mode' : '🌙 Switch to Dark Mode'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
             )}
           </div>
         </div>
       </header>
 
       <div className={`pagination-bar ${!isHeaderExpanded ? 'collapsed' : ''}`}>
-        <button onClick={() => setCurrentPage(p => Math.min(604, p + 1))} disabled={currentPage === 604}>
+        <button onClick={() => setCurrentPage(p => Math.min(defaultTotalPages, p + 1))} disabled={currentPage === defaultTotalPages}>
           <span className="desktop-only">◀ Next Page</span>
           <span className="mobile-only">◀ Next</span>
         </button>
@@ -458,33 +556,72 @@ function App() {
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <span style={{ position: 'absolute', left: '0.6rem', fontSize: '0.85rem', pointerEvents: 'none', color: 'var(--text-secondary)', fontWeight: 600 }}>Page</span>
               <input
-                type="number" min="1" max="604" value={inputPage} className="page-number-input"
+                type="number" min="1" max={defaultTotalPages} value={inputPage} className="page-number-input"
                 style={{ paddingLeft: '3.2rem', width: '5.8rem' }}
                 onChange={e => {
                   setInputPage(e.target.value);
                   const val = parseInt(e.target.value, 10);
-                  if (!isNaN(val) && val >= 1 && val <= 604) setCurrentPage(val);
+                  if (!isNaN(val) && val >= 1 && val <= defaultTotalPages) setCurrentPage(val);
                 }}
                 onBlur={() => setInputPage(currentPage.toString())}
               />
             </div>
             <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', fontWeight: 600 }}>of {defaultTotalPages}</span>
           </div>
-          <select
-            className="surah-select"
-            value={currentSurah}
-            onChange={e => {
-              const targetSurah = parseInt(e.target.value, 10);
-              const found = surahMap.find(s => s.surah === targetSurah);
-              if (found) {
-                setCurrentPage(found.page);
-                const wordId = surahEntryWordMap.get(targetSurah);
-                if (wordId !== undefined) scrollToMistake({ mode: 'word', surahNumber: targetSurah, ayahNumber: 1, wordId });
-              }
-            }}
-          >
-            {surahMap.map((s, i) => <option key={`${s.surah}-${i}`} value={s.surah}>{s.surah}. {s.name} (Page {s.page})</option>)}
-          </select>
+          {/* Custom Searchable Surah Dropdown */}
+          <div className="custom-surah-dropdown-container">
+            <input
+              type="text"
+              className="surah-select custom-surah-input"
+              value={surahSearch}
+              onChange={e => {
+                setSurahDropdownOpen(true);
+                setIsPristineSearch(false);
+                setSurahSearch(e.target.value);
+              }}
+              onFocus={(e) => {
+                setIsPristineSearch(true);
+                setSurahDropdownOpen(true);
+                e.target.select();
+              }}
+              onBlur={() => {
+                // Delay hiding dropdown so clicks register
+                setTimeout(() => setSurahDropdownOpen(false), 150);
+              }}
+              placeholder="Search Surah..."
+            />
+            {surahDropdownOpen && filteredSurahs.length > 0 && (
+              <div className="custom-surah-dropdown-list" ref={surahListRef}>
+                {filteredSurahs.map((s, i) => (
+                  <div
+                    key={`${s.surah}-${i}`}
+                    className={`custom-surah-dropdown-item ${s.surah === scrollSurah ? 'surah-active' : ''}`}
+                    onMouseDown={(e) => {
+                      // Prevent onblur from firing before the click bounds check
+                      e.preventDefault(); 
+                      setSurahSearch(`${s.surah}. ${s.name}`);
+                      setSurahDropdownOpen(false);
+                      setCurrentPage(s.page);
+                      const wordId = surahEntryWordMap.get(s.surah);
+                      if (wordId !== undefined) scrollToMistake({ mode: 'word', surahNumber: s.surah, ayahNumber: 1, wordId });
+                      
+                      // Explicitly remove focus from the input so the next click triggers onFocus
+                      if (document.activeElement instanceof HTMLElement) {
+                        document.activeElement.blur();
+                      }
+                    }}
+                  >
+                    <span style={{fontWeight: 700}}>{s.surah}.</span> {s.name} <span style={{fontSize: '0.8em', color: 'var(--text-secondary)'}}>(Page {s.page})</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {surahDropdownOpen && filteredSurahs.length === 0 && (
+              <div className="custom-surah-dropdown-list">
+                <div className="custom-surah-dropdown-item" style={{ color: 'var(--text-secondary)' }}>No results found.</div>
+              </div>
+            )}
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }} className="ayah-input-container">
             <select
               value={currentAyah} className="ayah-number-select"
