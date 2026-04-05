@@ -10,6 +10,8 @@ export interface WordData {
   surah: number;
   wordIndex: number;
   isEndOfAyah?: boolean;
+  ayahMarkerText?: string;
+  ayahMarkerExtra?: string;
 }
 
 export interface LineData {
@@ -35,9 +37,10 @@ interface QuranPageProps {
   showAllMistakes?: boolean;
   onSurahLimitsChange?: (limits: { surah: number, limit: number }[]) => void;
   fontSize?: number;
+  wordSpacing?: number;
 }
 
-export const QuranPage = ({ mode, pageData, onMistake, activeMistake, pageMistakes, showAllMistakes, onSurahLimitsChange, fontSize = 1.35 }: QuranPageProps) => {
+export const QuranPage = ({ mode, pageData, onMistake, activeMistake, pageMistakes, showAllMistakes, onSurahLimitsChange, fontSize = 1.35, wordSpacing = 0 }: QuranPageProps) => {
   const [hoveredAyah, setHoveredAyah] = useState<number | null>(null);
 
   const tokenizedLines = useMemo(() => {
@@ -53,8 +56,7 @@ export const QuranPage = ({ mode, pageData, onMistake, activeMistake, pageMistak
     const computeLimits = () => {
       const container = document.querySelector('.quran-container');
       if (!container) return;
-      
-      const totalHeight = container.scrollHeight;
+      if (!container) return;
       const lines = container.querySelectorAll('.quran-line[data-line-surah]');
       
       const limits: { surah: number, limit: number }[] = [];
@@ -64,10 +66,9 @@ export const QuranPage = ({ mode, pageData, onMistake, activeMistake, pageMistak
         const surah = parseInt(line.getAttribute('data-line-surah'), 10);
         if (!isNaN(surah) && !seenSurahs.has(surah)) {
           seenSurahs.add(surah);
-          // Calculate the relative position from top
+          // Calculate the true pixel offset from top
           const offsetTop = line.offsetTop;
-          // Limit is the percentage of scroll height
-          limits.push({ surah, limit: offsetTop / totalHeight });
+          limits.push({ surah, limit: offsetTop });
         }
       });
       
@@ -123,7 +124,7 @@ export const QuranPage = ({ mode, pageData, onMistake, activeMistake, pageMistak
     <div 
       className={`quran-container mode-${mode}`} 
       onClick={handleClick}
-      style={{ fontSize: `${fontSize}rem` }}
+      style={{ fontSize: `${fontSize}rem`, wordSpacing: `${wordSpacing}em` }}
     >
       {tokenizedLines.map((line, lIdx) => {
         // Determine surah for this line to help observer
@@ -142,16 +143,28 @@ export const QuranPage = ({ mode, pageData, onMistake, activeMistake, pageMistak
             <div className="basmallah">بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</div>
           )}
           {line.line_type === 'ayah' && line.words.map((word, wIdx) => {
-            const relevantMistake = pageMistakes?.find(m => 
-                                 m.surahNumber === word.surah &&
-                                 m.ayahNumber === word.ayah && 
-                                 (m.mode === 'ayah' || (m.mode === 'word' && m.wordIndex === word.wordIndex))
+            const ayahMistake = pageMistakes?.find(m => 
+              m.surahNumber === word.surah && 
+              m.ayahNumber === word.ayah && 
+              m.mode === 'ayah'
             );
 
-            const mistakeToHighlight = activeMistake?.surahNumber === word.surah && 
-                                      activeMistake.ayahNumber === word.ayah && 
-                                      (activeMistake.mode === 'ayah' || (activeMistake.mode === 'word' && activeMistake.wordIndex === word.wordIndex))
-                                      ? activeMistake : (showAllMistakes ? relevantMistake : null);
+            const activeWordMistake = activeMistake?.surahNumber === word.surah && 
+                                     activeMistake.ayahNumber === word.ayah && 
+                                     activeMistake.wordIndex === word.wordIndex && 
+                                     activeMistake.mode === 'word' ? activeMistake : null;
+
+            const relevantWordMistake = pageMistakes?.find(m => 
+                                     m.surahNumber === word.surah && 
+                                     m.ayahNumber === word.ayah && 
+                                     m.wordIndex === word.wordIndex && 
+                                     m.mode === 'word'
+            );
+
+            const wordMistakeToHighlight = activeWordMistake || (showAllMistakes ? relevantWordMistake : null);
+            const ayahMistakeToHighlight = (activeMistake?.mode === 'ayah' && activeMistake.surahNumber === word.surah && activeMistake.ayahNumber === word.ayah) 
+                                           ? activeMistake 
+                                           : (showAllMistakes ? ayahMistake : null);
             
             const hasSubwordMistake = showAllMistakes && pageMistakes?.some(m => 
                                  (m.mode === 'letter' || m.mode === 'tashkeel') && 
@@ -161,17 +174,40 @@ export const QuranPage = ({ mode, pageData, onMistake, activeMistake, pageMistak
             );
             
             if (word.isEndOfAyah) {
+              let mainAyahText = word.ayahMarkerText || word.text;
+              let extraChars = word.ayahMarkerExtra || '';
+
               return (
                 <React.Fragment key={word.id}>
                   <span 
-                    className={`ayah-part ayah ${mode === 'ayah' && hoveredAyah === word.ayah ? 'ayah-hovered' : ''}`}
+                    className={`ayah-part ayah ${ayahMistakeToHighlight ? 'mistake-ayah' : ''} ${mode === 'ayah' && hoveredAyah === word.ayah ? 'ayah-hovered' : ''}`}
                     data-ayah={word.ayah} 
                     data-surah={word.surah} 
-                    data-text={word.text}
                     onMouseEnter={() => mode === 'ayah' && setHoveredAyah(word.ayah)}
                     onMouseLeave={() => mode === 'ayah' && setHoveredAyah(null)}
                   >
-                    <span className="ayah-end-marker" data-ayah={word.ayah} data-surah={word.surah} data-text={word.text}>{word.text}</span>
+                    <span 
+                      className="ayah-end-marker" 
+                      data-ayah={word.ayah} 
+                      data-surah={word.surah} 
+                      style={{ background: 'none !important', position: 'relative', display: 'inline-block' }}
+                    >
+                      <span>{mainAyahText}</span>
+                      {extraChars && (
+                        <span style={{ 
+                          position: 'absolute', 
+                          top: '-0.45em', 
+                          left: 0, 
+                          right: 0, 
+                          textAlign: 'center', 
+                          fontSize: '0.7em',
+                          color: 'inherit',
+                          pointerEvents: 'none'
+                        }}>
+                          {'\u00A0' + extraChars}
+                        </span>
+                      )}
+                    </span>
                   </span>
                   {wIdx < line.words.length - 1 && <span className="word-space"> </span>}
                 </React.Fragment>
@@ -180,13 +216,13 @@ export const QuranPage = ({ mode, pageData, onMistake, activeMistake, pageMistak
             return (
               <React.Fragment key={word.id}>
                 <span 
-                  className={`ayah-part ayah ${mode === 'ayah' && hoveredAyah === word.ayah ? 'ayah-hovered' : ''}`}
+                  className={`ayah-part ayah ${ayahMistakeToHighlight ? 'mistake-ayah' : ''} ${mode === 'ayah' && hoveredAyah === word.ayah ? 'ayah-hovered' : ''}`}
                   data-ayah={word.ayah} 
                   data-surah={word.surah}
                   onMouseEnter={() => mode === 'ayah' && setHoveredAyah(word.ayah)}
                   onMouseLeave={() => mode === 'ayah' && setHoveredAyah(null)}
                 >
-                  <span className={`word ${mistakeToHighlight ? `mistake-${mistakeToHighlight.mode}` : ''}`} data-ayah={word.ayah} data-surah={word.surah} data-word={word.wordIndex} data-word-id={word.id} data-text={word.text}>
+                  <span className={`word ${wordMistakeToHighlight ? 'mistake-word' : ''}`} data-ayah={word.ayah} data-surah={word.surah} data-word={word.wordIndex} data-word-id={word.id} data-text={word.text}>
                   {((mode === 'word' || mode === 'ayah') && !hasSubwordMistake) ? word.text : word.tokenized.letters.map(letter => {
                     const isLetterActiveFromClick = activeMistake?.mode === 'letter' && activeMistake.surahNumber === word.surah && activeMistake.ayahNumber === word.ayah && activeMistake.wordIndex === word.wordIndex && activeMistake.letterIndex === letter.index;
                     const isTashkeelActiveFromClick = activeMistake?.mode === 'tashkeel' && activeMistake.surahNumber === word.surah && activeMistake.ayahNumber === word.ayah && activeMistake.wordIndex === word.wordIndex && activeMistake.tashkeelIndex === letter.index;
