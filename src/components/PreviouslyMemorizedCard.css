@@ -1,0 +1,668 @@
+/* ============================================================
+   PreviouslyMemorizedCard.css
+   Premium dark-mode card for the Hifdh tracking dashboard
+   ============================================================ */
+
+/* ── Fonts ── */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&display=swap');
+
+/* ── Design tokens ── */
+:root {
+  --pm-bg:           #1e1e1e;
+  --pm-surface:      #272727;
+  --pm-input-bg:     #141414;
+  --pm-border:       #333333;
+  --pm-border-focus: #d4a24c;
+  --pm-gold:         #d4a24c;
+  --pm-gold-hover:   #e6b55a;
+  --pm-gold-text:    #1a1000;
+  --pm-text:         #f3f4f6;
+  --pm-text-dim:     #9ca3af;
+  --pm-text-muted:   #4b5563;
+  --pm-error:        #f87171;
+
+  /* Pill hierarchy */
+  --pm-pill-high:    #1a3a2a;   /* deep forest green */
+  --pm-pill-high-bd: #2d6a4f;
+  --pm-pill-high-tx: #74c69d;
+
+  --pm-pill-mid:     #153527;   /* mid green, slightly dimmer */
+  --pm-pill-mid-bd:  #2a5a44;
+  --pm-pill-mid-tx:  #52b788;
+
+  --pm-pill-low:     #1c2933;   /* slate-blue-green */
+  --pm-pill-low-bd:  #2e4057;
+  --pm-pill-low-tx:  #7fbbdc;
+
+  --pm-pill-partial: #282020;   /* warm gray-red for partials */
+  --pm-pill-partial-bd: #4a3030;
+  --pm-pill-partial-tx: #d08080;
+}
+
+/* ── Base Card ──────────────────────────────────────────────────────────────── */
+.pm-card {
+  background:    var(--pm-bg);
+  border:        1px solid var(--pm-border);
+  border-radius: 16px;
+  padding:       24px;
+  display:       flex;
+  flex-direction: column;
+  gap:           18px;
+  color:         var(--pm-text);
+  box-sizing:    border-box;
+  width:         100%;
+  position:      relative;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────────── */
+.pm-header {
+  display:         flex;
+  flex-direction:  column;
+  gap:             14px;
+}
+
+@media (min-width: 768px) {
+  .pm-header {
+    flex-direction:  row;
+    justify-content: space-between;
+    align-items:     center;
+    gap:             16px;
+  }
+}
+
+.pm-header-left {
+  display:     flex;
+  align-items: center;
+  gap:         12px;
+}
+
+.pm-icon {
+  width:           42px;
+  height:          42px;
+  border-radius:   10px;
+  background:      rgba(212, 162, 76, 0.12);
+  border:          1px solid rgba(212, 162, 76, 0.3);
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  color:           var(--pm-gold);
+  flex-shrink:     0;
+}
+
+.pm-title {
+  font-family:    'Playfair Display', Georgia, serif;
+  font-size:      1.2rem;
+  font-weight:    700;
+  color:          var(--pm-text);
+  letter-spacing: -0.01em;
+  line-height:    1.2;
+}
+
+.pm-subtitle {
+  font-size:      0.65rem;
+  font-weight:    600;
+  letter-spacing: 0.1em;
+  color:          var(--pm-text-muted);
+  text-transform: uppercase;
+  margin-top:     3px;
+}
+
+/* Log button */
+.pm-log-btn {
+  padding:         10px 22px;
+  background:      var(--pm-gold);
+  color:           var(--pm-gold-text);
+  border:          none;
+  border-radius:   999px;
+  font-family:     inherit;
+  font-size:       0.875rem;
+  font-weight:     700;
+  cursor:          pointer;
+  white-space:     nowrap;
+  flex-shrink:     0;
+  transition:      background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+  box-shadow:      0 2px 10px rgba(212, 162, 76, 0.25);
+}
+
+.pm-log-btn:hover {
+  background:  var(--pm-gold-hover);
+  transform:   translateY(-1px);
+  box-shadow:  0 4px 18px rgba(212, 162, 76, 0.4);
+}
+
+.pm-log-btn:active {
+  transform: translateY(0);
+}
+
+/* Error */
+.pm-error {
+  font-size:   0.8rem;
+  color:       var(--pm-error);
+  padding:     2px 0;
+  font-weight: 500;
+}
+
+/* ── Form ────────────────────────────────────────────────────────────────────── */
+.pm-form {
+  display:        flex;
+  flex-direction: column;
+  gap:            14px;
+}
+
+@media (min-width: 768px) {
+  .pm-form {
+    flex-direction: row;
+    align-items:    flex-end;
+  }
+}
+
+.pm-field {
+  display:        flex;
+  flex-direction: column;
+  gap:            6px;
+  flex:           1;
+  min-width:      0;
+}
+
+.pm-field--unit {
+  flex:      0 0 auto;
+  min-width: 120px;
+}
+
+@media (max-width: 767px) {
+  .pm-field--unit { min-width: 0; width: 100%; }
+}
+
+.pm-label {
+  font-size:      0.62rem;
+  font-weight:    700;
+  letter-spacing: 0.1em;
+  color:          var(--pm-text-muted);
+  text-transform: uppercase;
+}
+
+/* Shared input / select base */
+.pm-select,
+.pm-page-input {
+  background:   var(--pm-input-bg);
+  border:       1px solid var(--pm-border);
+  border-radius: 8px;
+  color:        var(--pm-text);
+  font-family:  inherit;
+  font-size:    0.9rem;
+  font-weight:  600;
+  transition:   border-color 0.15s, box-shadow 0.15s;
+  box-sizing:   border-box;
+}
+
+.pm-select {
+  width:       100%;
+  appearance:  none;
+  padding:     10px 32px 10px 12px;
+  cursor:      pointer;
+}
+
+.pm-select--sm {
+  padding:   7px 28px 7px 10px;
+  font-size: 0.8rem;
+}
+
+.pm-select:focus,
+.pm-page-input:focus {
+  outline:    none;
+  border-color: var(--pm-border-focus);
+  box-shadow: 0 0 0 3px rgba(212, 162, 76, 0.14);
+}
+
+/* Select wrapper (for chevron overlay) */
+.pm-select-wrap {
+  position: relative;
+  display:  flex;
+  align-items: center;
+}
+
+.pm-select-chevron {
+  position:       absolute;
+  right:          10px;
+  color:          var(--pm-text-muted);
+  pointer-events: none;
+}
+
+/* Page range */
+.pm-page-range {
+  display:     flex;
+  align-items: center;
+  gap:         8px;
+}
+
+.pm-page-input {
+  width:       72px;
+  padding:     10px 8px;
+  text-align:  center;
+  /* Hide spin buttons */
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.pm-page-input::-webkit-inner-spin-button,
+.pm-page-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+.pm-page-to {
+  font-size:   0.8rem;
+  font-weight: 600;
+  color:       var(--pm-text-muted);
+}
+
+/* Ayah notice */
+.pm-ayah-notice {
+  font-size:  0.8rem;
+  color:      var(--pm-text-muted);
+  background: var(--pm-input-bg);
+  border:     1px solid var(--pm-border);
+  border-radius: 8px;
+  padding:    10px 12px;
+  font-style: italic;
+}
+
+/* SearchableDropdown override inside pm-card */
+.pm-dropdown .sdd-input {
+  background:  var(--pm-input-bg);
+  border-color: var(--pm-border);
+  color:       var(--pm-text);
+}
+
+.pm-dropdown .sdd-input:focus {
+  border-color: var(--pm-border-focus);
+  box-shadow:   0 0 0 3px rgba(212, 162, 76, 0.14);
+}
+
+.pm-dropdown .sdd-list {
+  background:  #191919;
+  border-color: var(--pm-border);
+}
+
+.pm-dropdown .sdd-item:hover,
+.pm-dropdown .sdd-item--active {
+  background: rgba(212, 162, 76, 0.08);
+}
+
+/* ── Divider ─────────────────────────────────────────────────────────────────── */
+.pm-divider {
+  height:     1px;
+  background: var(--pm-border);
+  margin:     2px 0;
+}
+
+/* ── Controls Row ────────────────────────────────────────────────────────────── */
+.pm-controls-row {
+  display:     flex;
+  align-items: center;
+  flex-wrap:   wrap;
+  gap:         10px;
+}
+
+.pm-control-group {
+  display:     flex;
+  align-items: center;
+  gap:         6px;
+}
+
+.pm-control-label {
+  font-size:      0.65rem;
+  font-weight:    700;
+  letter-spacing: 0.08em;
+  color:          var(--pm-text-muted);
+  text-transform: uppercase;
+  white-space:    nowrap;
+}
+
+/* Tab group (Sort) */
+.pm-tab-group {
+  display:       flex;
+  background:    var(--pm-input-bg);
+  border:        1px solid var(--pm-border);
+  border-radius: 999px;
+  padding:       3px;
+  gap:           2px;
+}
+
+.pm-tab {
+  padding:       4px 12px;
+  border:        none;
+  background:    transparent;
+  border-radius: 999px;
+  color:         var(--pm-text-muted);
+  font-family:   inherit;
+  font-size:     0.72rem;
+  font-weight:   600;
+  cursor:        pointer;
+  white-space:   nowrap;
+  transition:    all 0.15s;
+}
+
+.pm-tab--active {
+  background:  var(--pm-surface);
+  color:       var(--pm-gold);
+  box-shadow:  0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.pm-tab:not(.pm-tab--active):hover {
+  color: #d1d5db;
+}
+
+/* Gear wrap */
+.pm-gear-wrap {
+  position:    relative;
+  margin-left: auto;
+}
+
+.pm-settings-btn {
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  width:           30px;
+  height:          30px;
+  border:          1px solid var(--pm-border);
+  border-radius:   8px;
+  background:      transparent;
+  color:           var(--pm-text-muted);
+  cursor:          pointer;
+  transition:      all 0.15s;
+}
+
+.pm-settings-btn:hover,
+.pm-settings-btn--active {
+  color:        var(--pm-gold);
+  border-color: rgba(212, 162, 76, 0.4);
+  background:   rgba(212, 162, 76, 0.06);
+}
+
+/* ── Settings Popover ────────────────────────────────────────────────────────── */
+.pm-settings-popover {
+  position:      absolute;
+  top:           calc(100% + 8px);
+  right:         0;
+  z-index:       50;
+  min-width:     210px;
+  background:    #1a1a1a;
+  border:        1px solid var(--pm-border);
+  border-radius: 12px;
+  padding:       14px 16px;
+  box-shadow:    0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.pm-popover-title {
+  font-size:      0.68rem;
+  font-weight:    700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color:          var(--pm-gold);
+  margin-bottom:  10px;
+  padding-bottom: 8px;
+  border-bottom:  1px solid var(--pm-border);
+}
+
+.pm-checkbox-list {
+  display:        flex;
+  flex-direction: column;
+  gap:            8px;
+}
+
+.pm-checkbox-row {
+  display:     flex;
+  align-items: center;
+  gap:         8px;
+  cursor:      pointer;
+  font-size:   0.82rem;
+  font-weight: 500;
+  color:       var(--pm-text);
+  user-select: none;
+  transition:  color 0.12s;
+}
+
+.pm-checkbox-row:hover { color: #fff; }
+
+.pm-checkbox-row input[type="checkbox"] {
+  width:         15px;
+  height:        15px;
+  accent-color:  var(--pm-gold);
+  cursor:        pointer;
+  flex-shrink:   0;
+}
+
+.pm-checkbox-hint {
+  font-size:   0.65rem;
+  color:       var(--pm-text-muted);
+  background:  rgba(255, 255, 255, 0.05);
+  border:      1px solid var(--pm-border);
+  border-radius: 4px;
+  padding:     1px 5px;
+  margin-left: auto;
+}
+
+/* ── Pill Container ──────────────────────────────────────────────────────────── */
+.pm-pill-container {
+  display:   flex;
+  flex-wrap: wrap;
+  gap:       10px;
+}
+
+/* ── Base Pill ─────────────────────────────────────────────────────────────────
+   All pills share this shape. Hierarchy colours are applied via modifier classes.
+   ──────────────────────────────────────────────────────────────────────────── */
+.pm-pill {
+  display:       inline-flex;
+  align-items:   center;
+  gap:           7px;
+  border-radius: 999px;
+  padding:       6px 14px 6px 8px;
+  font-size:     0.82rem;
+  font-weight:   600;
+  border:        1px solid transparent;
+  transition:    filter 0.15s, transform 0.12s;
+  cursor:        default;
+}
+
+.pm-pill:hover {
+  filter:    brightness(1.12);
+  transform: translateY(-1px);
+}
+
+/* Division key badge (e.g. "30", "36") */
+.pm-pill-key {
+  display:         inline-flex;
+  align-items:     center;
+  justify-content: center;
+  min-width:       22px;
+  height:          22px;
+  border-radius:   50%;
+  font-size:       0.68rem;
+  font-weight:     700;
+  background:      rgba(255, 255, 255, 0.12);
+  padding:         0 4px;
+  flex-shrink:     0;
+}
+
+.pm-pill-label {
+  line-height: 1.1;
+}
+
+/* ── HIGH: Juz / Manzil / Para ───────────────────────────────────────────────── */
+.pm-pill--high,
+.pm-pill--juz,
+.pm-pill--manzil,
+.pm-pill--para {
+  background:   var(--pm-pill-high);
+  border-color: var(--pm-pill-high-bd);
+  color:        var(--pm-pill-high-tx);
+}
+
+/* ── MID: Surah / Hizb / Rub ─────────────────────────────────────────────────── */
+.pm-pill--mid,
+.pm-pill--surah,
+.pm-pill--hizb,
+.pm-pill--rub {
+  background:   var(--pm-pill-mid);
+  border-color: var(--pm-pill-mid-bd);
+  color:        var(--pm-pill-mid-tx);
+}
+
+/* ── LOW: Page / Ruku (or grouped ranges) ────────────────────────────────────── */
+.pm-pill--low,
+.pm-pill--page,
+.pm-pill--ruku,
+.pm-pill--grouped {
+  background:   var(--pm-pill-low);
+  border-color: var(--pm-pill-low-bd);
+  color:        var(--pm-pill-low-tx);
+}
+
+/* Grouped pills get a slight transparency overlay to differentiate from single-page */
+.pm-pill--grouped {
+  opacity: 0.88;
+}
+
+/* ── PARTIAL: Leftover fragments ─────────────────────────────────────────────── */
+.pm-pill--partial {
+  background:   var(--pm-pill-partial);
+  border-color: var(--pm-pill-partial-bd);
+  color:        var(--pm-pill-partial-tx);
+  font-style:   italic;
+  opacity:      0.8;
+}
+
+/* ── Expand / Actions row ────────────────────────────────────────────────────── */
+.pm-expand-row,
+.pm-actions-row {
+  display:         flex;
+  justify-content: center;
+}
+
+.pm-expand-btn,
+.pm-clear-btn {
+  display:       inline-flex;
+  align-items:   center;
+  gap:           4px;
+  border:        1px solid var(--pm-border);
+  border-radius: 999px;
+  background:    transparent;
+  font-family:   inherit;
+  font-size:     0.72rem;
+  font-weight:   600;
+  cursor:        pointer;
+  transition:    all 0.15s;
+}
+
+.pm-expand-btn {
+  padding: 5px 14px;
+  color:   var(--pm-text-muted);
+}
+
+.pm-expand-btn:hover {
+  color:        var(--pm-gold);
+  border-color: rgba(212, 162, 76, 0.4);
+}
+
+.pm-clear-btn {
+  padding: 4px 12px;
+  color:   var(--pm-text-muted);
+  font-size: 0.68rem;
+}
+
+.pm-clear-btn:hover {
+  color:        var(--pm-error);
+  border-color: rgba(248, 113, 113, 0.4);
+}
+
+.pm-confirm-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: pm-fade-in 0.2s ease-out;
+}
+
+.pm-confirm-text {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--pm-error);
+  opacity: 0.9;
+}
+
+.pm-clear-btn--confirm {
+  background: rgba(248, 113, 113, 0.1) !important;
+  border-color: var(--pm-error) !important;
+  color: var(--pm-error) !important;
+}
+
+.pm-clear-btn--confirm:hover {
+  background: var(--pm-error) !important;
+  color: #fff !important;
+}
+
+.pm-cancel-btn {
+  background: transparent;
+  border: 1px solid var(--pm-border);
+  border-radius: 999px;
+  padding: 4px 12px;
+  color: var(--pm-text-muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.pm-cancel-btn:hover {
+  color: var(--pm-text);
+  border-color: var(--pm-text-dim);
+}
+
+@keyframes pm-fade-in {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Empty state ─────────────────────────────────────────────────────────────── */
+.pm-empty {
+  font-size:   0.85rem;
+  color:       var(--pm-text-muted);
+  text-align:  center;
+  padding:     8px 0;
+  font-style:  italic;
+}
+
+/* ── Responsive overrides ────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .pm-card    { padding: 16px; gap: 14px; }
+  .pm-log-btn { width: 100%; text-align: center; }
+
+  .pm-controls-row {
+    gap: 8px;
+  }
+
+  .pm-settings-popover {
+    right:     auto;
+    left:      0;
+    min-width: 190px;
+  }
+
+  .pm-pill {
+    font-size: 0.78rem;
+    padding:   5px 12px 5px 7px;
+  }
+}
+
+/* ── Light-mode override (if user is not in dark mode) ───────────────────────── */
+html:not(.dark-mode) .pm-card {
+  --pm-bg:        #f9f9f9;
+  --pm-surface:   #ffffff;
+  --pm-input-bg:  #f3f3f3;
+  --pm-border:    #ddd;
+  --pm-text:      #111;
+  --pm-text-dim:  #555;
+  --pm-text-muted:#888;
+}
+
+html:not(.dark-mode) .pm-settings-popover {
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
