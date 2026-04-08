@@ -24,10 +24,20 @@ type UnitType = typeof MADANI_UNITS[number] | typeof INDOPAK_UNITS[number];
 
 type MetadataMap = Record<string, [number, number]>;
 
+const GRAD_SETTINGS_KEY = 'hifdhGradSettings';
+
 const DEFAULT_GRAD: GraduationSettings = {
-  madani:  { surahToJuz: false, hizbToSurah: false, rubToHizb: false, pageToRub: false, ayahToPage: true },
+  madani:  { surahToJuz: false, hizbToSurah: true, rubToHizb: false, pageToRub: false, ayahToPage: true },
   indopak: { paraToManzil: false, surahToPara: false, pageToSurah: false, ayahToRuku: false, ayahToPage: true },
 };
+
+function loadGradSettings(): GraduationSettings {
+  try {
+    const raw = localStorage.getItem(GRAD_SETTINGS_KEY);
+    if (raw) return { ...DEFAULT_GRAD, ...JSON.parse(raw) };
+  } catch { /* fall through */ }
+  return DEFAULT_GRAD;
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -85,6 +95,7 @@ export function PreviouslyMemorizedCard({ scriptStyle = 'madani' }: Props) {
     const merged = mergeOverlappingIntervals(intervals);
     setStored(merged);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+    window.dispatchEvent(new Event('hifdhRangesV2Updated'));
   };
 
   const mergedRanges = useMemo(
@@ -101,11 +112,16 @@ export function PreviouslyMemorizedCard({ scriptStyle = 'madani' }: Props) {
 
   // Display controls
   const [viewMode, setViewMode]         = useState<ViewMode>('default');
-  const [gradSettings, setGradSettings] = useState<GraduationSettings>(DEFAULT_GRAD);
+  const [gradSettings, setGradSettings] = useState<GraduationSettings>(loadGradSettings);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [sortOrder, setSortOrder]       = useState<'mushaf' | 'recent'>('mushaf');
   const [expanded, setExpanded]               = useState(false);
   const [confirmingClear, setConfirmingClear] = useState(false);
+
+  // Persist graduation settings whenever they change
+  useEffect(() => {
+    localStorage.setItem(GRAD_SETTINGS_KEY, JSON.stringify(gradSettings));
+  }, [gradSettings]);
 
   const popoverRef = useRef<HTMLDivElement>(null);
   const gearRef    = useRef<HTMLButtonElement>(null);

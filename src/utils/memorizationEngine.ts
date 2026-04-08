@@ -136,6 +136,278 @@ export function isFullyContained(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// 2b. countSubUnits
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Counts how many specific sub-units (e.g., 'Surah', 'Page') intersect with a given word range.
+ * This is useful for scheduling math (e.g., knowing how many Surahs are in a Juz block).
+ */
+export function countSubUnits(
+  targetRange: Interval,
+  suType: string,
+  scriptStyle: ScriptStyle,
+  metadata: QuranMetadata
+): number {
+  if (suType === 'Ayah') {
+    // Math for ayahs would require deep ayah metadata. For now, estimate or return fixed number.
+    // If you need exact ayahs in a juz, it's roughly ~200. We will support it properly later.
+    return 100; 
+  }
+
+  const { madani, indopak } = metadata;
+  let map: MetadataMap | undefined;
+  
+  if (scriptStyle === 'madani') {
+    map = (madani as any)[suType.toLowerCase()];
+    if (suType === "Rub'") map = madani.rub;
+  } else {
+    map = (indopak as any)[suType.toLowerCase()];
+  }
+
+  if (!map) return 0;
+
+  const [tS, tE] = targetRange;
+  let count = 0;
+  for (const range of Object.values(map)) {
+    const [s, e] = range;
+    // Overlaps if start is before target end AND end is after target start
+    if (s <= tE && e >= tS) {
+      count++;
+    }
+  }
+
+  return count;
+}
+
+export interface DailyTask {
+  shortLabel: string;
+  details: string[];
+  ruLabel?: string; // The Revision Unit name (e.g. "Juz 30" or "2. Al-Baqarah")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 2c. getValidSUs — Smart SU dropdown population
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Global hierarchy truth arrays. The SU must appear BELOW the RU in this order.
+ * This is the single source of truth for which units a schedule unit can be.
+ */
+export const MADANI_SU_HIERARCHY  = ['Juz', 'Hizb', "Rub'", 'Surah', 'Page', 'Ayah'] as const;
+export const INDOPAK_SU_HIERARCHY = ['Manzil', 'Para', 'Surah', 'Ruku', 'Page', 'Ayah'] as const;
+
+/**
+ * Returns which Schedule Units are valid for a given Revision Unit, applying
+ * both hierarchy rules and count-sense checks (e.g., no 'Hizb' if RU only
+ * contains 1 hizb, because that is the RU itself).
+ */
+export function getValidSUs(
+  ruType: string,
+  ruRange: [number, number],
+  scriptStyle: ScriptStyle,
+  metadata: QuranMetadata
+): string[] {
+  const hierarchy = scriptStyle === 'madani' ? MADANI_SU_HIERARCHY : INDOPAK_SU_HIERARCHY;
+  const ruIdx = hierarchy.indexOf(ruType as any);
+  
+  // Start from the item AFTER ruType in hierarchy
+  const candidates = ruIdx === -1 ? [...hierarchy] : hierarchy.slice(ruIdx + 1);
+  
+  // Filter to only include SUs that have >1 sub-unit in the RU's range
+  // (or are 'Ayah' / 'Page' which are always valid if they're below the RU)
+  return candidates.filter(suType => {
+    if (suType === 'Ayah') return true; // Always valid as lowest granularity
+    const count = countSubUnits(ruRange, suType, scriptStyle, metadata);
+    // Must have at least 2 sub-units in range to make scheduling meaningful,
+    // unless the RU is itself a Surah (then 1 Page is valid)
+    if (ruType === 'Surah') return count >= 1;
+    return count >= 2;
+  });
+}
+
+/**
+ * Distributes overlapping sub-units into daily buckets for the calendar.
+ */
+export function distributeSUs(
+  ruRange: [number, number],
+  suType: string,
+  durationDays: number,
+  scriptStyle: ScriptStyle,
+  metadata: QuranMetadata,
+  ruLabel?: string
+): DailyTask[] {
+  if (durationDays < 1) return [];
+  
+  // ── Ayah handling using surah_detail ────────────────────────────────────────
+  if (suType === 'Ayah') {
+    return distributeAyahs(ruRange, durationDays, metadata, ruLabel);
+  }
+
+  const { madani, indopak } = metadata;
+  let map: MetadataMap | undefined;
+  
+  if (scriptStyle === 'madani') {
+    map = (madani as any)[suType.toLowerCase()];
+    if (suType === "Rub'") map = madani.rub;
+  } else {
+    map = (indopak as any)[suType.toLowerCase()];
+  }
+
+  if (!map) return Array(durationDays).fill({ shortLabel: `0 ${suType}s`, details: [] });
+
+  const [tS, tE] = ruRange;
+  const overlapping: { key: string, label: string }[] = [];
+  
+  let labelFn = (k: string) => `${suType} ${k}`;
+  if (suType === 'Surah') labelFn = k => `${k}. ${SURAH_NAMES[+k - 1] ?? ''}`;
+
+  // Sort by start word ID to ensure chronological order
+  const entries = Object.entries(map).sort((a,b) => a[1][0] - b[1][0]);
+  for (const [k, r] of entries) {
+    if (r[0] <= tE && r[1] >= tS) {
+      overlapping.push({ key: k, label: labelFn(k) });
+    }
+  }
+  
+  const total = overlapping.length;
+  if (total === 0) return Array(durationDays).fill({ shortLabel: `0 ${suType}s`, details: [] });
+  
+  const base = Math.floor(total / durationDays);
+  const remainder = total % durationDays;
+  
+  const days: DailyTask[] = [];
+  let currentIndex = 0;
+  
+  for (let i = 0; i < durationDays; i++) {
+    const countForDay = i < durationDays - remainder ? base : base + 1;
+    const slice = overlapping.slice(currentIndex, currentIndex + countForDay);
+    currentIndex += countForDay;
+    
+    let shortLabel = '';
+    if (slice.length === 0) shortLabel = `0 ${suType}s`;
+    else if (slice.length === 1) {
+      if (suType === 'Surah') shortLabel = SURAH_NAMES[+slice[0].key - 1] ?? slice[0].label;
+      else shortLabel = slice[0].label;
+    }
+    else {
+      const first = slice[0];
+      const last = slice[slice.length - 1];
+      if (suType === 'Surah') {
+         shortLabel = `${SURAH_NAMES[+first.key - 1]} – ${SURAH_NAMES[+last.key - 1]}`;
+      } else {
+         shortLabel = `${suType}s ${first.key}–${last.key}`;
+      }
+    }
+    
+    days.push({
+      shortLabel,
+      details: slice.map(s => s.label),
+      ruLabel,
+    });
+  }
+  
+  return days;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// distributeAyahs  — Ayah-level scheduling using surah_detail.ayah_ranges
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Uses surah_detail[N].ayah_ranges (keyed "page_N" → [firstAyah, lastAyah])
+ * to distribute exact ayah bounds across durationDays daily buckets.
+ * Works for any ruRange that covers one or more complete/partial surahs.
+ */
+function distributeAyahs(
+  ruRange: [number, number],
+  durationDays: number,
+  metadata: QuranMetadata,
+  ruLabel?: string
+): DailyTask[] {
+  const surahDetail = (metadata as any).madani?.surah_detail as
+    Record<string, { weight_pages: number; ayah_ranges: Record<string, [number, number]> }>;
+
+  if (!surahDetail) {
+    return Array(durationDays).fill({ shortLabel: 'Ayahs (Meta missing)', details: [], ruLabel });
+  }
+
+  const [rS, rE] = ruRange;
+  const surahMap = (metadata as any).madani?.surah as Record<string, [number, number]>;
+
+  // Collect all (surahNum, pageKey, ayahStart, ayahEnd) entries that fall within ruRange
+  const ayahEntries: { surahNum: number; pageNum: number; firstAyah: number; lastAyah: number }[] = [];
+
+  for (const [surahKey, detail] of Object.entries(surahDetail)) {
+    const surahRange = surahMap?.[surahKey];
+    if (!surahRange) continue;
+    // Skip if surah is entirely outside ruRange
+    if (surahRange[1] < rS || surahRange[0] > rE) continue;
+
+    for (const [pageKey, ayahRange] of Object.entries(detail.ayah_ranges)) {
+      const pageNum = parseInt(pageKey.replace('page_', ''), 10);
+      const pageWordRange = (metadata as any).madani?.page?.[String(pageNum)] as [number, number] | undefined;
+      if (!pageWordRange) continue;
+      // Only include pages that intersect the ruRange
+      if (pageWordRange[1] < rS || pageWordRange[0] > rE) continue;
+
+      ayahEntries.push({
+        surahNum: parseInt(surahKey, 10),
+        pageNum,
+        firstAyah: ayahRange[0],
+        lastAyah: ayahRange[1],
+      });
+    }
+  }
+
+  ayahEntries.sort((a, b) => a.pageNum - b.pageNum || a.surahNum - b.surahNum);
+
+  const total = ayahEntries.length;
+  if (total === 0) {
+    return Array(durationDays).fill({ shortLabel: '0 Ayahs', details: [], ruLabel });
+  }
+
+  const base = Math.floor(total / durationDays);
+  const remainder = total % durationDays;
+  const days: DailyTask[] = [];
+  let idx = 0;
+
+  for (let i = 0; i < durationDays; i++) {
+    const count = i < durationDays - remainder ? base : base + 1;
+    const slice = ayahEntries.slice(idx, idx + count);
+    idx += count;
+
+    if (slice.length === 0) {
+      days.push({ shortLabel: '0 Ayahs', details: [], ruLabel });
+      continue;
+    }
+
+    // Compact short label: first-to-last surah + first-to-last ayah bounds
+    const firstEntry = slice[0];
+    const lastEntry  = slice[slice.length - 1];
+    const firstSurahName = SURAH_NAMES[firstEntry.surahNum - 1] ?? `Surah ${firstEntry.surahNum}`;
+    const lastSurahName  = SURAH_NAMES[lastEntry.surahNum - 1]  ?? `Surah ${lastEntry.surahNum}`;
+
+    let shortLabel: string;
+    if (firstEntry.surahNum === lastEntry.surahNum) {
+      shortLabel = `${firstSurahName}: ${firstEntry.firstAyah}–${lastEntry.lastAyah}`;
+    } else {
+      shortLabel = `${firstSurahName} ${firstEntry.firstAyah} → ${lastSurahName} ${lastEntry.lastAyah}`;
+    }
+
+    // Detailed list: one entry per page/surah block
+    const details = slice.map(e => {
+      const surahName = SURAH_NAMES[e.surahNum - 1] ?? `Surah ${e.surahNum}`;
+      return `${surahName}: Ayahs ${e.firstAyah}–${e.lastAyah}`;
+    });
+
+    days.push({ shortLabel, details, ruLabel });
+  }
+
+  return days;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // Internal helpers
 // ═══════════════════════════════════════════════════════════════════════════════
 

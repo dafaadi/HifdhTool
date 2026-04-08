@@ -4,6 +4,7 @@ import type { ScriptStyle } from '../utils/memorizationEngine';
 import { SettingsButton } from './SettingsButton';
 import { PreviouslyMemorizedCard } from './PreviouslyMemorizedCard';
 import { Logo } from './Logo';
+import { SchedulingDashboard } from './scheduling/SchedulingDashboard';
 import '../index.css';
 
 function Dashboard() {
@@ -63,6 +64,7 @@ function Dashboard() {
 
       <main className="dashboard-main">
         <PreviouslyMemorizedCard scriptStyle={scriptStyle} />
+        <SchedulingDashboard scriptStyle={scriptStyle} />
       </main>
     </div>
   );
