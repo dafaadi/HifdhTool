@@ -5,6 +5,8 @@ import {
   type ScriptStyle, type QuranMetadata, type DailyTask,
   SURAH_NAMES, isFullyContained, countSubUnits, distributeSUs, getValidSUs
 } from '../../utils/memorizationEngine';
+import type { Schedule, RevisionUnitData } from '../../types';
+import { createBaselineFSRSCard } from '../../utils/fsrsLogic';
 import rawMeta from '../../data/quran-metadata.json';
 import './SchedulingDashboard.css';
 
@@ -162,6 +164,7 @@ interface Props {
 export function RevisionScheduler({ scriptStyle, onGenerateTasks, onClearTasks }: Props) {
   const [revisionQueue, setRevisionQueue] = useState<RevisionItem[]>([]);
   const [durationDays, setDurationDays] = useState<number | ''>(30);
+  const [startDateString, setStartDateString] = useState<string>(new Date().toISOString().split('T')[0]);
   const [unitType, setUnitType] = useState<string>('Surah');
   const [isCustomOrder, setIsCustomOrder] = useState<boolean>(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -244,16 +247,16 @@ export function RevisionScheduler({ scriptStyle, onGenerateTasks, onClearTasks }
   };
 
   const handleGenerate = () => {
-    if (revisionQueue.length === 0 || durationDays === '' || durationDays < 1) return;
+    if (revisionQueue.length === 0 || durationDays === '' || durationDays < 1 || !startDateString) return;
     setHasGenerated(true);
     
     const taskMap: Record<string, DailyTask[]> = {};
-    const today = new Date();
+    const baseDate = new Date(startDateString);
     
     for (const item of revisionQueue) {
-      const daysArr = distributeSUs(item.range, item.suType, durationDays as number, scriptStyle, metadata, item.ruLabel);
+      const daysArr = distributeSUs(item.range, item.suType, durationDays as number, scriptStyle, metadata, item.ruType, item.ruLabel, startDateString);
       for (let i = 0; i < daysArr.length; i++) {
-        const d = new Date(today);
+        const d = new Date(baseDate);
         d.setDate(d.getDate() + i);
         const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         if (!taskMap[dateKey]) taskMap[dateKey] = [];
@@ -269,10 +272,53 @@ export function RevisionScheduler({ scriptStyle, onGenerateTasks, onClearTasks }
     onClearTasks();
   };
 
-  // "Confirm" persists the preview tasks permanently — no alert, no clear
+  // "Confirm" persists the preview tasks permanently
   const handleConfirmSchedule = () => {
+    // 1. Build the formal structures
+    const revisionList: RevisionUnitData[] = revisionQueue.map((item, idx) => {
+      // Re-run distribution purely for the persisted arrays
+      const scheduleList = distributeSUs(item.range, item.suType, durationDays as number, scriptStyle, metadata, item.ruType, undefined, startDateString);
+      const fsrsCard = createBaselineFSRSCard('normal');
+
+      return {
+        id: crypto.randomUUID(),
+        unitType: item.ruType,
+        unitValue: item.ruValue,
+        scheduledUnitType: item.suType,
+        scheduleList: scheduleList.map(t => {
+          // ensure UI-only 'details' property isn't structurally saved
+          const { ruLabel, details, ...coreUnit } = t;
+          return coreUnit;
+        }),
+        fsrsCard,
+        reviewLogs: [],
+        createdAt: new Date().toISOString(),
+        isDeleted: false,
+        priorityValue: idx + 1 // Queue ranking 1...N
+      };
+    });
+
+    const newSchedule: Schedule = {
+      id: crypto.randomUUID(),
+      title: 'Revision Schedule',
+      createdAt: new Date().toISOString(),
+      isDeleted: false,
+      revisionList,
+      startDate: startDateString
+    };
+
+    // 2. Persist to localStorage
+    const existingRaw = localStorage.getItem('schedules');
+    const schedules: Schedule[] = existingRaw ? JSON.parse(existingRaw) : [];
+    schedules.push(newSchedule);
+    localStorage.setItem('schedules', JSON.stringify(schedules));
+
+    window.dispatchEvent(new Event('hifdhSchedulesUpdated'));
+
+    // 3. Clear UI
     setHasGenerated(false);
     setRevisionQueue([]);
+    onClearTasks();
   };
 
   return (
@@ -322,6 +368,17 @@ export function RevisionScheduler({ scriptStyle, onGenerateTasks, onClearTasks }
               const val = e.target.value;
               setDurationDays(val === '' ? '' : Math.max(1, parseInt(val) || 1));
             }} 
+          />
+        </div>
+
+        <div style={{ flex: '0 0 auto' }}>
+          <label className="sd-field-label">START DATE</label>
+          <input 
+            type="date" 
+            className="sd-select" 
+            style={{ width: '100%', boxSizing: 'border-box', height: '54px' }}
+            value={startDateString} 
+            onChange={e => setStartDateString(e.target.value)} 
           />
         </div>
       </div>

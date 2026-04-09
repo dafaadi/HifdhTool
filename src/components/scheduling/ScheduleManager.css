@@ -1,0 +1,288 @@
+.sm-section {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: var(--surface-color);
+  border-radius: 1rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  font-family: 'Montserrat', sans-serif;
+  color: var(--text-primary);
+}
+
+.dark-mode .sm-section {
+  background: #1a1a1a;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.sm-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.sm-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.sm-filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: 1px solid var(--border-color);
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sm-filter-btn:hover {
+  background: var(--bg-color);
+}
+
+/* ── LEVEL 1: Schedule Card ─────────────────────────────────────────────────── */
+.sm-schedule-card {
+  border-radius: 1rem;
+  margin-bottom: 1rem;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid transparent;
+}
+
+/* Varied backgrounds as per mockup */
+.sm-schedule-card:nth-child(odd) { background: #f0f7f0; } /* Light green tint */
+.sm-schedule-card:nth-child(even) { background: #fffcf0; } /* Light gold tint */
+
+.dark-mode .sm-schedule-card:nth-child(odd) { background: #1b261b; }
+.dark-mode .sm-schedule-card:nth-child(even) { background: #26241b; }
+
+.sm-card-header {
+  display: flex;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  cursor: pointer;
+  gap: 1rem;
+}
+
+.sm-card-serial {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #7d7d00;
+}
+
+.sm-card-title-row {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sm-card-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.sm-title-input {
+  font-size: 1.1rem;
+  font-weight: 700;
+  background: none;
+  border: none;
+  border-bottom: 1px solid #7d7d00;
+  color: var(--text-primary);
+  width: 100%;
+  padding: 0;
+  outline: none;
+}
+
+.sm-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sm-icon-btn {
+  background: none;
+  border: none;
+  padding: 0.4rem;
+  border-radius: 0.4rem;
+  color: #c0c0c0;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sm-icon-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text-primary);
+}
+
+.sm-icon-btn--delete:hover {
+  color: #ef4444;
+}
+
+.sm-chevron {
+  color: var(--text-secondary);
+  transition: transform 0.3s;
+}
+
+.sm-chevron--open {
+  transform: rotate(180deg);
+}
+
+/* ── LEVEL 2: Revision Unit ──────────────────────────────────────────────────── */
+.sm-card-body {
+  padding: 0 1.5rem 1.5rem 1.5rem;
+}
+
+.sm-ru-container {
+  margin-top: 0.5rem;
+  border-radius: 0.75rem;
+  background: rgba(0, 0, 0, 0.03);
+  overflow: hidden;
+}
+
+.dark-mode .sm-ru-container {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.sm-ru-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.sm-ru-header:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.sm-ru-title-col {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sm-ru-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.sm-label-fixed {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  letter-spacing: 0.05em;
+}
+
+.sm-ru-meta-col {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  color: var(--text-secondary);
+}
+
+.sm-date {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+/* ── LEVEL 3: Schedule Unit ──────────────────────────────────────────────────── */
+.sm-ru-body {
+  padding: 0 1rem 1rem 1rem;
+}
+
+.sm-su-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.sm-su-row {
+  display: grid;
+  grid-template-columns: 1fr auto 180px auto;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  gap: 1rem;
+  position: relative;
+}
+
+.sm-su-row::before {
+  content: '';
+  position: absolute;
+  left: -5px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border-color, #e5e7eb);
+}
+
+.sm-su-label {
+  font-size: 0.85rem;
+  font-style: italic;
+  font-weight: 500;
+  color: var(--text-primary);
+  padding-left: 1rem;
+}
+
+.sm-su-pref {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.sm-su-date {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-align: right;
+}
+
+.sm-empty {
+  padding: 3rem;
+  text-align: center;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.sm-confirm-overlay {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #fff;
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.4rem;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  position: absolute;
+  right: 0;
+  z-index: 10;
+}
+
+.dark-mode .sm-confirm-overlay {
+  background: #2d2d2d;
+}
+
+.sm-confirm-btn {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.3rem 0.6rem;
+  border-radius: 0.3rem;
+  border: none;
+  cursor: pointer;
+}
+
+.sm-confirm-btn--yes { background: #fee2e2; color: #ef4444; }
+.sm-confirm-btn--no { background: #f3f4f6; color: #1f2937; }

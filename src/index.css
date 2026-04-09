@@ -1707,16 +1707,19 @@ html.dark-mode .hamburger-btn:hover {
 
 .sdd-input {
   width: 100%;
-  padding: 0.6rem 0.75rem 0.6rem 2.1rem;
+  padding: 0 0.75rem 0 2.1rem;
+  height: 54px;
   border: 1px solid var(--border-color);
   border-radius: 0.6rem;
   font-family: 'Montserrat', sans-serif;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 500;
   color: var(--text-primary);
   background: var(--surface-color);
   transition: border-color 0.15s, box-shadow 0.15s;
   box-sizing: border-box;
+  display: flex;
+  align-items: center;
 }
 
 .sdd-input:focus {
@@ -1961,6 +1964,7 @@ html.dark-mode .sdd-item-label {
   background: #262626;
   border-color: #333;
   color: #f3f4f6;
+  height: 54px;
 }
 
 .pmc-dropdown .sdd-input:focus {
@@ -1992,7 +1996,7 @@ html.dark-mode .sdd-item-label {
 .pmc-select {
   width: 100%;
   appearance: none;
-  padding: 0.6rem 2rem 0.6rem 0.85rem;
+  padding: 0 32px 0 14px;
   background: #262626;
   border: 1px solid #333;
   border-radius: 0.6rem;
@@ -2002,6 +2006,7 @@ html.dark-mode .sdd-item-label {
   font-weight: 600;
   cursor: pointer;
   transition: border-color 0.15s;
+  height: 54px;
 }
 
 .pmc-select:focus {
@@ -2178,6 +2183,7 @@ html:not(.dark-mode) .pmc-pill {
   transition: border-color 0.15s;
   -moz-appearance: textfield;
   appearance: textfield;
+  height: 54px;
 }
 
 .pmc-page-input::-webkit-inner-spin-button,

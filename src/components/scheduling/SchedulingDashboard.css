@@ -148,7 +148,9 @@
   background:  var(--sd-input-bg);
   border:      1px solid var(--sd-input-border);
   border-radius: 10px;
-  padding:     10px 14px;
+  padding:     0 14px;
+  height:      54px;
+  box-sizing:  border-box;
   transition:  border-color 0.15s;
 }
 
@@ -226,6 +228,21 @@
   display:     flex;
   align-items: center;
   flex-shrink: 0;
+}
+
+.pm-select,
+.pm-page-input {
+  background:   var(--pm-input-bg);
+  border:       1px solid var(--pm-border);
+  border-radius: 9px;
+  color:        var(--pm-text);
+  font-family:  inherit;
+  font-size:    0.95rem;
+  font-weight:  600;
+  height:       54px;
+  padding:      0 14px;
+  transition:   border-color 0.15s, box-shadow 0.15s;
+  box-sizing:   border-box;
 }
 
 .sd-select {
@@ -615,6 +632,14 @@
   font-family:     inherit;
   border:          1px solid transparent;
   box-sizing:      border-box;
+}
+
+/* SearchableDropdown override inside pm-card */
+.pm-dropdown .sdd-input {
+  background:   var(--pm-input-bg);
+  border-color: var(--pm-border);
+  color:        var(--pm-text);
+  height:       54px;
 }
 
 .pm-btn--primary {

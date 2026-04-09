@@ -111,7 +111,6 @@ export function PreviouslyMemorizedCard({ scriptStyle = 'madani' }: Props) {
   const [error, setError]         = useState('');
 
   // Display controls
-  const [viewMode, setViewMode]         = useState<ViewMode>('default');
   const [gradSettings, setGradSettings] = useState<GraduationSettings>(loadGradSettings);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [sortOrder, setSortOrder]       = useState<'mushaf' | 'recent'>('mushaf');
@@ -189,8 +188,8 @@ export function PreviouslyMemorizedCard({ scriptStyle = 'madani' }: Props) {
 
   // ── Pill generation ──
   const pills = useMemo(
-    () => generatePills(mergedRanges, viewMode, gradSettings, scriptStyle, metadata),
-    [mergedRanges, viewMode, gradSettings, scriptStyle]
+    () => generatePills(mergedRanges, 'default', gradSettings, scriptStyle, metadata),
+    [mergedRanges, gradSettings, scriptStyle]
   );
 
   const sortedPills = useMemo(() =>
@@ -318,20 +317,7 @@ export function PreviouslyMemorizedCard({ scriptStyle = 'madani' }: Props) {
               </div>
             </div>
 
-            <div className="pm-control-group">
-              <span className="pm-control-label">View:</span>
-              <div className="pm-select-wrap">
-                <select
-                  className="pm-select pm-select--sm"
-                  value={viewMode}
-                  onChange={e => setViewMode(e.target.value as ViewMode)}
-                >
-                  <option value="default">Default</option>
-                  <option value="surahs-only">Surahs Only</option>
-                </select>
-                <ChevronDown size={12} className="pm-select-chevron" />
-              </div>
-            </div>
+
 
             {/* Gear + settings popover */}
             <div className="pm-gear-wrap">

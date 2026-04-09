@@ -109,13 +109,17 @@
 
 /* Log button */
 .pm-log-btn {
-  padding:         10px 22px;
+  padding:         0 28px;
+  height:          54px;
+  display:         inline-flex;
+  align-items:     center;
+  justify-content: center;
   background:      var(--pm-gold);
   color:           var(--pm-gold-text);
   border:          none;
   border-radius:   999px;
   font-family:     inherit;
-  font-size:       0.875rem;
+  font-size:       0.95rem;
   font-weight:     700;
   cursor:          pointer;
   white-space:     nowrap;
@@ -186,11 +190,12 @@
 .pm-page-input {
   background:   var(--pm-input-bg);
   border:       1px solid var(--pm-border);
-  border-radius: 8px;
+  border-radius: 9px;
   color:        var(--pm-text);
   font-family:  inherit;
-  font-size:    0.9rem;
+  font-size:    0.95rem;
   font-weight:  600;
+  height:       54px;
   transition:   border-color 0.15s, box-shadow 0.15s;
   box-sizing:   border-box;
 }
@@ -198,7 +203,7 @@
 .pm-select {
   width:       100%;
   appearance:  none;
-  padding:     10px 32px 10px 12px;
+  padding:     0 32px 0 14px;
   cursor:      pointer;
 }
 
@@ -237,7 +242,7 @@
 
 .pm-page-input {
   width:       72px;
-  padding:     10px 8px;
+  padding:     0 8px;
   text-align:  center;
   /* Hide spin buttons */
   -moz-appearance: textfield;
@@ -269,6 +274,7 @@
   background:  var(--pm-input-bg);
   border-color: var(--pm-border);
   color:       var(--pm-text);
+  height:      54px;
 }
 
 .pm-dropdown .sdd-input:focus {

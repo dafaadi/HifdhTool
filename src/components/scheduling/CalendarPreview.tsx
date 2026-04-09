@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
-import type { DailyTask } from '../../utils/memorizationEngine';
+import { type DailyTask, SURAH_NAMES } from '../../utils/memorizationEngine';
 import './SchedulingDashboard.css';
 
 export type DayTaskType = 'empty' | 'normal' | 'today' | 'hasTasks';
@@ -134,8 +134,8 @@ export function CalendarPreview({ taskMap }: Props) {
                      <span className="sd-cal-day-num">{c.day}</span>
                      <div className="sd-cal-task-list">
                        {c.dailyTasks.map((t, idx) => (
-                         <div key={idx} className="sd-cal-task-label" title={t.shortLabel}>
-                           {t.shortLabel}
+                         <div key={idx} className="sd-cal-task-label" title={`${SURAH_NAMES[t.surahNumber - 1]}: ${t.displayLabel}`}>
+                           <span style={{fontWeight: 700}}>{SURAH_NAMES[t.surahNumber - 1]}:</span> {t.displayLabel}
                          </div>
                        ))}
                        {c.dailyTasks.length === 0 && notes[c.dateKey as string] && (
@@ -176,7 +176,7 @@ export function CalendarPreview({ taskMap }: Props) {
                       {task.ruLabel && (
                         <p className="sd-modal-task-ru-label">{task.ruLabel}</p>
                       )}
-                      <h4 className="sd-modal-task-title">{task.shortLabel}</h4>
+                      <h4 className="sd-modal-task-title">{task.displayLabel}</h4>
                       <ul className="sd-modal-task-details">
                         {task.details.map((detail, didx) => (
                           <li key={didx}>{detail}</li>

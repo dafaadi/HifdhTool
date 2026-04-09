@@ -180,11 +180,13 @@ export function countSubUnits(
   return count;
 }
 
-export interface DailyTask {
-  shortLabel: string;
-  details: string[];
-  ruLabel?: string; // The Revision Unit name (e.g. "Juz 30" or "2. Al-Baqarah")
-}
+import type { ScheduleUnit } from '../types';
+import { createBaselineFSRSCard } from './fsrsLogic';
+
+export type DailyTask = ScheduleUnit & {
+  ruLabel?: string;
+  details: string[]; // Keep details for UI rendering in modal
+};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 2c. getValidSUs — Smart SU dropdown population
@@ -235,13 +237,15 @@ export function distributeSUs(
   durationDays: number,
   scriptStyle: ScriptStyle,
   metadata: QuranMetadata,
-  ruLabel?: string
+  ruType: string,
+  ruLabel?: string,
+  startDateString?: string
 ): DailyTask[] {
   if (durationDays < 1) return [];
   
   // ── Ayah handling using surah_detail ────────────────────────────────────────
   if (suType === 'Ayah') {
-    return distributeAyahs(ruRange, durationDays, metadata, ruLabel);
+    return distributeAyahs(ruRange, durationDays, metadata, ruType, ruLabel, startDateString);
   }
 
   const { madani, indopak } = metadata;
@@ -254,10 +258,10 @@ export function distributeSUs(
     map = (indopak as any)[suType.toLowerCase()];
   }
 
-  if (!map) return Array(durationDays).fill({ shortLabel: `0 ${suType}s`, details: [] });
+  if (!map) return [];
 
   const [tS, tE] = ruRange;
-  const overlapping: { key: string, label: string }[] = [];
+  const overlapping: { key: string, label: string, range: [number, number] }[] = [];
   
   let labelFn = (k: string) => `${suType} ${k}`;
   if (suType === 'Surah') labelFn = k => `${k}. ${SURAH_NAMES[+k - 1] ?? ''}`;
@@ -266,12 +270,12 @@ export function distributeSUs(
   const entries = Object.entries(map).sort((a,b) => a[1][0] - b[1][0]);
   for (const [k, r] of entries) {
     if (r[0] <= tE && r[1] >= tS) {
-      overlapping.push({ key: k, label: labelFn(k) });
+      overlapping.push({ key: k, label: labelFn(k), range: r });
     }
   }
   
   const total = overlapping.length;
-  if (total === 0) return Array(durationDays).fill({ shortLabel: `0 ${suType}s`, details: [] });
+  if (total === 0) return [];
   
   const base = Math.floor(total / durationDays);
   const remainder = total % durationDays;
@@ -300,9 +304,48 @@ export function distributeSUs(
       }
     }
     
+    const totalRange: [number, number] = [slice[0].range[0], slice[slice.length - 1].range[1]];
+
+    // Build page numbers
+    const pageNumbers: number[] = [];
+    const pageMap = (scriptStyle === 'madani' ? madani.page : indopak.page) as MetadataMap;
+    for (const [k, r] of Object.entries(pageMap)) {
+      if (r[0] <= totalRange[1] && r[1] >= totalRange[0]) pageNumbers.push(+k);
+    }
+
+    // Determine primary surah
+    const surahNumbers: number[] = [];
+    const surahMap = (scriptStyle === 'madani' ? madani.surah : indopak.surah) as MetadataMap;
+    for (const [k, r] of Object.entries(surahMap)) {
+      if (r[0] <= totalRange[1] && r[1] >= totalRange[0]) surahNumbers.push(+k);
+    }
+    const surahNumber = surahNumbers.length > 0 ? surahNumbers[0] : 1;
+
+    // Remove redundant Surah prefix, just use the generated shortLabel
+    const displayLabel = shortLabel;
+
+    // Get sequential Date
+    const baseDate = startDateString ? new Date(startDateString) : new Date();
+    baseDate.setDate(baseDate.getDate() + i);
+
+    const fsrsCard = createBaselineFSRSCard('normal');
+    fsrsCard.due = baseDate;
+
     days.push({
-      shortLabel,
-      details: slice.map(s => s.label),
+      id: crypto.randomUUID(),
+      wordIdRange: totalRange,
+      surahNumber,
+      pageNumbers,
+      displayLabel,
+      timePreference: 'Any',
+      fsrsCard,
+      reviewLogs: [],
+      note: '',
+      createdAt: new Date().toISOString(),
+      isDeleted: false,
+
+      // UI extensions
+      details: slice.map(s => s.label), // stripped of surah prefix
       ruLabel,
     });
   }
@@ -323,13 +366,15 @@ function distributeAyahs(
   ruRange: [number, number],
   durationDays: number,
   metadata: QuranMetadata,
-  ruLabel?: string
+  ruType: string,
+  ruLabel?: string,
+  startDateString?: string
 ): DailyTask[] {
   const surahDetail = (metadata as any).madani?.surah_detail as
     Record<string, { weight_pages: number; ayah_ranges: Record<string, [number, number]> }>;
 
   if (!surahDetail) {
-    return Array(durationDays).fill({ shortLabel: 'Ayahs (Meta missing)', details: [], ruLabel });
+    return [];
   }
 
   const [rS, rE] = ruRange;
@@ -364,7 +409,7 @@ function distributeAyahs(
 
   const total = ayahEntries.length;
   if (total === 0) {
-    return Array(durationDays).fill({ shortLabel: '0 Ayahs', details: [], ruLabel });
+    return [];
   }
 
   const base = Math.floor(total / durationDays);
@@ -388,20 +433,45 @@ function distributeAyahs(
     const firstSurahName = SURAH_NAMES[firstEntry.surahNum - 1] ?? `Surah ${firstEntry.surahNum}`;
     const lastSurahName  = SURAH_NAMES[lastEntry.surahNum - 1]  ?? `Surah ${lastEntry.surahNum}`;
 
-    let shortLabel: string;
+    // Strip the primary Surah name for displayLabel
+    let displayLabel: string;
     if (firstEntry.surahNum === lastEntry.surahNum) {
-      shortLabel = `${firstSurahName}: ${firstEntry.firstAyah}–${lastEntry.lastAyah}`;
+      displayLabel = `Ayahs ${firstEntry.firstAyah}–${lastEntry.lastAyah}`;
     } else {
-      shortLabel = `${firstSurahName} ${firstEntry.firstAyah} → ${lastSurahName} ${lastEntry.lastAyah}`;
+      displayLabel = `${firstSurahName} ${firstEntry.firstAyah} → ${lastSurahName} ${lastEntry.lastAyah}`;
     }
 
-    // Detailed list: one entry per page/surah block
-    const details = slice.map(e => {
-      const surahName = SURAH_NAMES[e.surahNum - 1] ?? `Surah ${e.surahNum}`;
-      return `${surahName}: Ayahs ${e.firstAyah}–${e.lastAyah}`;
-    });
+    // Determine pages
+    const pageNumbers = Array.from(new Set(slice.map(s => s.pageNum))).sort((a,b) => a - b);
+    
+    // Convert to word range roughly
+    const pageMap = (metadata as any).madani.page as MetadataMap;
+    const startWord = pageMap[String(pageNumbers[0])]?.[0] ?? 0;
+    const endWord = pageMap[String(pageNumbers[pageNumbers.length - 1])]?.[1] ?? 0;
 
-    days.push({ shortLabel, details, ruLabel });
+    const baseDate = startDateString ? new Date(startDateString) : new Date();
+    baseDate.setDate(baseDate.getDate() + i);
+    const fsrsCard = createBaselineFSRSCard('normal');
+    fsrsCard.due = baseDate;
+
+    days.push({
+      id: crypto.randomUUID(),
+      wordIdRange: [startWord, endWord],
+      surahNumber: firstEntry.surahNum,
+      ayahRange: [firstEntry.firstAyah, lastEntry.lastAyah], // rough estimate
+      pageNumbers,
+      displayLabel,
+      timePreference: 'Any',
+      fsrsCard,
+      reviewLogs: [],
+      note: '',
+      createdAt: new Date().toISOString(),
+      isDeleted: false,
+
+      // UI Details
+      details: slice.map(e => `Ayahs ${e.firstAyah}–${e.lastAyah}`), 
+      ruLabel,
+    });
   }
 
   return days;
@@ -410,6 +480,35 @@ function distributeAyahs(
 // ═══════════════════════════════════════════════════════════════════════════════
 // Internal helpers
 // ═══════════════════════════════════════════════════════════════════════════════
+
+/** Returns surah name(s) covering a specific word ID range, optionally filtered by a constraint range. */
+export function getSurahNamesForRange(
+  range: [number, number],
+  scriptStyle: ScriptStyle,
+  metadata: QuranMetadata,
+  constraintRange?: [number, number]
+): string {
+  const surahMap = (scriptStyle === 'madani' ? metadata.madani.surah : metadata.indopak.surah) as MetadataMap;
+  if (!surahMap) return '';
+  const [rS, rE] = range;
+  const found: string[] = [];
+
+  const surahEntries = Object.entries(surahMap).sort((a, b) => a[1][0] - b[1][0]);
+  for (const [k, r] of surahEntries) {
+    if (r[0] <= rE && r[1] >= rS) {
+      // If a constraint is provided (e.g. we only care about Al-Mulk),
+      // only include this surah if it overlaps with the constraint.
+      if (constraintRange) {
+        if (r[1] < constraintRange[0] || r[0] > constraintRange[1]) continue;
+      }
+      found.push(SURAH_NAMES[+k - 1]);
+    }
+  }
+
+  if (found.length === 0) return '';
+  if (found.length === 1) return found[0];
+  return `${found[0]}–${found[found.length - 1]}`;
+}
 
 /** Remove a single interval from a pool, returning the remaining fragments. */
 function subtractFromPool(pool: Interval[], remove: Interval): Interval[] {
