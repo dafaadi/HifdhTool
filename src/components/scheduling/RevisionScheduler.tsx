@@ -11,8 +11,8 @@ import './SchedulingDashboard.css';
 const metadata = rawMeta as unknown as QuranMetadata;
 const STORAGE_KEY = 'hifdhRangesV2';
 
-const MADANI_UNITS  = ['Juz', 'Surah', 'Hizb', "Rub'"] as const;
-const INDOPAK_UNITS = ['Manzil', 'Para', 'Surah', 'Ruku'] as const;
+const MADANI_UNITS  = ['Juz', 'Surah', 'Hizb', "Rub'", 'Page'] as const;
+const INDOPAK_UNITS = ['Manzil', 'Para', 'Surah', 'Ruku', 'Page'] as const;
 
 function loadStored(): number[][] {
   try {
@@ -29,7 +29,7 @@ function buildRevisionOptions(
   scriptStyle: ScriptStyle,
   mergedRanges: number[][],
 ): DropdownOption[] {
-  if (unitType === 'Page' || unitType === 'Ayah') return [];
+  if (unitType === 'Ayah') return [];
 
   let map: Record<string, [number, number]> | undefined;
   let labelFn: (k: string) => string;
@@ -45,6 +45,11 @@ function buildRevisionOptions(
     case "Rub'":   map = metadata.madani.rub;     labelFn = k => `Rub' ${k}`;    break;
     case 'Ruku':   map = metadata.indopak.ruku;   labelFn = k => `Ruku ${k}`;    break;
     case 'Manzil': map = metadata.indopak.manzil; labelFn = k => `Manzil ${k}`;  break;
+    case 'Page': {
+      map = scriptStyle === 'madani' ? metadata.madani.page : metadata.indopak.page;
+      labelFn = k => `Page ${k}`;
+      break;
+    }
     default: return [];
   }
 
@@ -365,8 +370,8 @@ export function RevisionScheduler({ scriptStyle, onGenerateTasks, onClearTasks }
         ) : (
           <>
             <button 
-              className="pm-btn" 
-              style={{ flex: 1, padding: '8px', background: 'transparent', border: '1px solid #3f3f46', color: '#e4e4e7' }}
+              className="pm-btn pm-btn--cancel" 
+              style={{ flex: 1, padding: '8px' }}
               onClick={handleCancelPreview}
             >
               Cancel

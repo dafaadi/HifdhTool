@@ -31,15 +31,15 @@
 ═══════════════════════════════════════ */
 .sd-section {
   width:     100%;
-  max-width: 900px;
+  max-width: 1100px;
   display:   flex;
   flex-direction: column;
-  gap:       1.5rem;
+  gap:       2rem;
 }
 
 .sd-heading {
   font-family:    'Playfair Display', Georgia, serif;
-  font-size:      1.35rem;
+  font-size:      1.6rem;
   font-weight:    700;
   color:          #f3f4f6;
   margin:         0;
@@ -59,11 +59,11 @@
    Base card
 ═══════════════════════════════════════ */
 .sd-card {
-  border-radius:  16px;
-  padding:        24px 28px;
+  border-radius:  20px;
+  padding:        32px 36px;
   display:        flex;
   flex-direction: column;
-  gap:            16px;
+  gap:            20px;
   box-sizing:     border-box;
 }
 
@@ -85,9 +85,9 @@
 }
 
 .sd-card-icon {
-  width:           42px;
-  height:          42px;
-  border-radius:   10px;
+  width:           48px;
+  height:          48px;
+  border-radius:   12px;
   display:         flex;
   align-items:     center;
   justify-content: center;
@@ -108,7 +108,7 @@
 
 .sd-card-title {
   font-family: 'Playfair Display', Georgia, serif;
-  font-size:   1.25rem;
+  font-size:   1.45rem;
   font-weight: 700;
   color:       #f3f4f6;
   margin:      0;
@@ -232,13 +232,13 @@
   appearance:   none;
   background:   #0d1810;
   border:       1px solid var(--sd-green-border);
-  border-radius: 7px;
+  border-radius: 9px;
   color:        #d1d5db;
   font-family:  inherit;
-  font-size:    0.9rem;
+  font-size:    1rem;
   font-weight:  600;
-  padding:      8px 26px 8px 12px;
-  height:       48px;
+  padding:      8px 32px 8px 14px;
+  height:       54px;
   cursor:       pointer;
   outline:      none;
   transition:   border-color 0.15s;
@@ -305,7 +305,7 @@
 }
 
 .sd-field-label {
-  font-size:      0.68rem;
+  font-size:      0.78rem;
   font-weight:    700;
   letter-spacing: 0.12em;
   color:          #6b7280;
@@ -361,10 +361,10 @@
 
 .sd-cal-meta h2 {
   font-family:  'Playfair Display', Georgia, serif;
-  font-size:    1.8rem;
+  font-size:    2.2rem;
   font-weight:  700;
   color:        #f3f4f6;
-  margin:       0 0 4px;
+  margin:       0 0 6px;
 }
 
 .sd-cal-meta p {
@@ -600,6 +600,68 @@
 .sd-textarea:focus { border-color: var(--sd-green-icon-bd); outline: none; }
 
 /* ═══════════════════════════════════════
+   Reusable Buttons (Dashboard Scale)
+   ═══════════════════════════════════════ */
+.pm-btn {
+  display:         inline-flex;
+  align-items:     center;
+  justify-content: center;
+  border-radius:   8px;
+  font-weight:     700;
+  font-size:       0.86rem;
+  letter-spacing:  0.02em;
+  cursor:          pointer;
+  transition:      all 0.18s ease;
+  font-family:     inherit;
+  border:          1px solid transparent;
+  box-sizing:      border-box;
+}
+
+.pm-btn--primary {
+  background:   var(--sd-green-icon-bg);
+  border-color: var(--sd-green-icon-bd);
+  color:        var(--sd-green-tx);
+}
+.pm-btn--primary:hover {
+  background:   var(--sd-green-icon-bd);
+  color:        #fff;
+}
+.pm-btn--primary:disabled {
+  opacity: 0.4; cursor: not-allowed;
+}
+
+.pm-btn--cancel {
+  background:   transparent;
+  border-color: #3f3f46;
+  color:        #a1a1aa;
+}
+.pm-btn--cancel:hover {
+  border-color: #71717a;
+  color:        #f4f4f5;
+  background:   rgba(255, 255, 255, 0.04);
+}
+
+/* Light mode overrides for buttons */
+html:not(.dark-mode) .pm-btn--primary {
+  background:   #059669;
+  border-color: #047857;
+  color:        #fff;
+}
+html:not(.dark-mode) .pm-btn--primary:hover {
+  background:   #047857;
+}
+
+html:not(.dark-mode) .pm-btn--cancel {
+  border-color: #d1d5db;
+  color:        #6b7280;
+}
+html:not(.dark-mode) .pm-btn--cancel:hover {
+  background:   #f3f4f6;
+  border-color: #9ca3af;
+  color:        #111827;
+}
+
+/* ═══════════════════════════════════════
    Responsive
 ═══════════════════════════════════════ */
 @media (max-width: 700px) {
@@ -617,15 +679,31 @@
 html:not(.dark-mode) .sd-heading    { color: #111827; }
 html:not(.dark-mode) .sd-card-title { color: #111827; }
 html:not(.dark-mode) .sd-ru-name   { color: #1f2937; }
+html:not(.dark-mode) .sd-cal-meta h2 { color: #111827; }
+html:not(.dark-mode) .sd-cal-meta p  { color: #6b7280; }
+html:not(.dark-mode) .sd-field-label { color: #4b5563; }
+html:not(.dark-mode) .sd-checkbox-label { color: #374151; }
 
 html:not(.dark-mode) .sd-card--revision {
-  background: #f0f7f3;
-  border-color: #b7d9c5;
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+html:not(.dark-mode) .sd-badge--strengthening {
+  color: #065f46;
+  border-color: #86efac;
+  background: rgba(134, 239, 172, 0.2);
+}
+
+html:not(.dark-mode) .sd-badge--progress {
+  color: #92400e;
+  border-color: #fde68a;
+  background: rgba(253, 230, 138, 0.3);
 }
 
 html:not(.dark-mode) .sd-card--memorization {
-  background: #f7f5e8;
-  border-color: #d8d298;
+  background: #fefce8;
+  border-color: #fef08a;
 }
 
 html:not(.dark-mode) .sd-search-wrap {
@@ -636,6 +714,19 @@ html:not(.dark-mode) .sd-search-wrap {
 html:not(.dark-mode) .sd-search-input { color: #374151; }
 html:not(.dark-mode) .sd-search-input::placeholder { color: #9ca3af; }
 
+html:not(.dark-mode) .sdd-input {
+  background:  #fff !important;
+  color:       #111827 !important;
+  border-color: #d1d5db !important;
+}
+
+html:not(.dark-mode) .sdd-list {
+  background: #fff !important;
+  border-color: #d1d5db !important;
+}
+
+html:not(.dark-mode) .sdd-item-label { color: #111827 !important; }
+
 html:not(.dark-mode) .sd-ru-item  {
   background:   #fff;
   border-color: #e5e7eb;
@@ -643,17 +734,34 @@ html:not(.dark-mode) .sd-ru-item  {
 
 html:not(.dark-mode) .sd-select {
   background:   #fff;
-  border-color: #b7d9c5;
+  border-color: #d1d5db;
   color:        #1f2937;
 }
 
+html:not(.dark-mode) .sd-card--revision .sd-unit-output { color: #059669; }
+html:not(.dark-mode) .sd-card--memorization .sd-unit-output { color: #92400e; }
+
 html:not(.dark-mode) .sd-cal-grid      { border-color: #e5e7eb; }
-html:not(.dark-mode) .sd-cal-weekdays  { background: #f9fafb; border-color: #e5e7eb; }
+html:not(.dark-mode) .sd-cal-weekdays  { background: #f9fafb; border-bottom-color: #e5e7eb; }
 html:not(.dark-mode) .sd-cal-days      { background: #fff; }
-html:not(.dark-mode) .sd-cal-day       { border-color: #f0f0f0; color: #d1d5db; }
-html:not(.dark-mode) .sd-cal-day--active { color: #6b7280; }
-html:not(.dark-mode) .sd-cal-day--today  { background: #f3f4f6; color: #111827; }
-html:not(.dark-mode) .sd-cal-day--revision-task     { background: #ecf7f0; color: #2d6a4f; }
-html:not(.dark-mode) .sd-cal-day--memorization-task { background: #fdf8e3; color: #92620a; }
+html:not(.dark-mode) .sd-cal-day       { border-color: #f0f0f0; color: #9ca3af; }
+html:not(.dark-mode) .sd-cal-day--active { color: #4b5563; }
+html:not(.dark-mode) .sd-cal-day--today  { background: #f3f4f6; }
+html:not(.dark-mode) .sd-cal-day--today .sd-cal-day-num { color: #111827; }
+html:not(.dark-mode) .sd-cal-day--has-tasks { background: #f0fdf4; }
+html:not(.dark-mode) .sd-cal-day--revision-task     { background: #ecf7f0; color: #065f46; }
+html:not(.dark-mode) .sd-cal-day--memorization-task { background: #fdf8e3; color: #92400e; }
 html:not(.dark-mode) .sd-cal-day--empty { background: #fafafa; }
-html:not(.dark-mode) .sd-cal-nav-btn { background: #f3f4f6; border-color: #d1d5db; color: #374151; }
+html:not(.dark-mode) .sd-cal-nav-btn { background: #fff; border-color: #d1d5db; color: #374151; }
+
+html:not(.dark-mode) .sd-modal-content {
+  background: #fff;
+  border-color: #e5e7eb;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+}
+html:not(.dark-mode) .sd-modal-header { border-bottom-color: #e5e7eb; }
+html:not(.dark-mode) .sd-modal-header h3 { color: #111827; }
+html:not(.dark-mode) .sd-modal-task-title { color: #059669; }
+html:not(.dark-mode) .sd-modal-task-details { color: #374151; }
+html:not(.dark-mode) .sd-modal-task-ru-label { color: #6b7280; }
+html:not(.dark-mode) .sd-textarea { background: #f9fafb; border-color: #d1d5db; color: #111827; }

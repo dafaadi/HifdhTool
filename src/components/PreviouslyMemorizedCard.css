@@ -43,11 +43,11 @@
 .pm-card {
   background:    var(--pm-bg);
   border:        1px solid var(--pm-border);
-  border-radius: 16px;
-  padding:       24px;
+  border-radius: 20px;
+  padding:       32px;
   display:       flex;
   flex-direction: column;
-  gap:           18px;
+  gap:           24px;
   color:         var(--pm-text);
   box-sizing:    border-box;
   width:         100%;
@@ -77,9 +77,9 @@
 }
 
 .pm-icon {
-  width:           42px;
-  height:          42px;
-  border-radius:   10px;
+  width:           48px;
+  height:          48px;
+  border-radius:   12px;
   background:      rgba(212, 162, 76, 0.12);
   border:          1px solid rgba(212, 162, 76, 0.3);
   display:         flex;
@@ -91,7 +91,7 @@
 
 .pm-title {
   font-family:    'Playfair Display', Georgia, serif;
-  font-size:      1.2rem;
+  font-size:      1.45rem;
   font-weight:    700;
   color:          var(--pm-text);
   letter-spacing: -0.01em;
@@ -174,7 +174,7 @@
 }
 
 .pm-label {
-  font-size:      0.62rem;
+  font-size:      0.72rem;
   font-weight:    700;
   letter-spacing: 0.1em;
   color:          var(--pm-text-muted);
@@ -653,14 +653,44 @@
 
 /* ── Light-mode override (if user is not in dark mode) ───────────────────────── */
 html:not(.dark-mode) .pm-card {
-  --pm-bg:        #f9f9f9;
+  --pm-bg:        #fdfbf7;
   --pm-surface:   #ffffff;
-  --pm-input-bg:  #f3f3f3;
-  --pm-border:    #ddd;
-  --pm-text:      #111;
-  --pm-text-dim:  #555;
-  --pm-text-muted:#888;
+  --pm-input-bg:  #ffffff;
+  --pm-border:    #d1d5db;
+  --pm-text:      #111827;
+  --pm-text-dim:  #4b5563;
+  --pm-text-muted:#6b7280;
+
+  /* Pills in light mode */
+  --pm-pill-high:    #ecfdf5;
+  --pm-pill-high-bd: #34d399; /* Sharper border */
+  --pm-pill-high-tx: #065f46;
+
+  --pm-pill-mid:     #f0fdf4;
+  --pm-pill-mid-bd:  #86efac; /* Sharper border */
+  --pm-pill-mid-tx:  #166534;
+
+  --pm-pill-low:     #f0f9ff;
+  --pm-pill-low-bd:  #7dd3fc; /* Sharper border */
+  --pm-pill-low-tx:  #075985;
+
+  --pm-pill-partial: #fff1f2;
+  --pm-pill-partial-bd: #fda4af; /* Sharper border */
+  --pm-pill-partial-tx: #9f1239;
 }
+
+html:not(.dark-mode) .pm-pill-key {
+  background: rgba(0, 0, 0, 0.06);
+  color: inherit;
+}
+
+html:not(.dark-mode) .pm-title { color: #111827; }
+html:not(.dark-mode) .pm-subtitle { color: #6b7280; }
+html:not(.dark-mode) .pm-label { color: #4b5563; }
+html:not(.dark-mode) .pm-checkbox-row { color: #374151; }
+html:not(.dark-mode) .pm-checkbox-row:hover { color: #111827; }
+html:not(.dark-mode) .pm-checkbox-hint { color: #6b7280; border-color: #d1d5db; background: #f9fafb; }
+html:not(.dark-mode) .pm-settings-btn { border-color: #d1d5db; }
 
 html:not(.dark-mode) .pm-settings-popover {
   background: #fff;
