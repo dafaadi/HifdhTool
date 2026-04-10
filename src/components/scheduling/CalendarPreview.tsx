@@ -1,28 +1,83 @@
 import { useState, useMemo, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { type DailyTask, SURAH_NAMES } from '../../utils/memorizationEngine';
+import { type DailyTask, SURAH_NAMES, type ScriptStyle, generateProjectedSUs, type ProjectedTask } from '../../utils/memorizationEngine';
+import metadata from '../../data/quran-metadata.json';
+import type { Schedule } from '../../types';
 import './SchedulingDashboard.css';
 
 export type DayTaskType = 'empty' | 'normal' | 'today' | 'hasTasks';
 
 interface Props {
   taskMap: Record<string, DailyTask[]>;
+  scriptStyle: ScriptStyle;
 }
 
 const WEEKDAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
-const TYPE_CLASS: Record<DayTaskType, string> = {
-  empty:    'sd-cal-day--empty',
-  normal:   '',
-  today:    'sd-cal-day--today',
-  hasTasks: 'sd-cal-day--has-tasks',
-};
+const TASK_COLORS = [
+  { bg: 'rgba(22, 101, 52, 0.2)',  border: '#166534', tx: '#86efac' }, // Rich Green
+  { bg: 'rgba(21, 128, 61, 0.2)',  border: '#15803d', tx: '#4ade80' }, // Grass
+  { bg: 'rgba(5, 150, 105, 0.2)',  border: '#059669', tx: '#6ee7b7' }, // Emerald
+  { bg: 'rgba(4, 120, 87, 0.2)',   border: '#047857', tx: '#34d399' }, // Teal Green
+  { bg: 'rgba(63, 98, 18, 0.2)',   border: '#3f6212', tx: '#bef264' }, // Olive Green
+  { bg: 'rgba(101, 163, 13, 0.2)', border: '#65a30d', tx: '#d9f99d' }, // Lime Green
+];
+
+function getTaskStyles(ruId?: string) {
+  if (!ruId) return TASK_COLORS[0];
+  let hash = 0;
+  for (let i = 0; i < ruId.length; i++) {
+    hash = ruId.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % TASK_COLORS.length;
+  return TASK_COLORS[index];
+}
+
+const GRAY_PALETTE = [
+  { bg: 'rgba(113, 113, 122, 0.1)', border: '#52525b', tx: '#a1a1aa' }, // Zinc
+  { bg: 'rgba(100, 116, 139, 0.1)', border: '#475569', tx: '#94a3b8' }, // Slate
+  { bg: 'rgba(115, 115, 115, 0.1)', border: '#525252', tx: '#a3a3a3' }, // Neutral
+];
+
+function getProjectedStyles(ruId?: string) {
+  if (!ruId) return GRAY_PALETTE[0];
+  let hash = 0;
+  for (let i = 0; i < ruId.length; i++) {
+    hash = ruId.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % GRAY_PALETTE.length;
+  return GRAY_PALETTE[index];
+}
 
 function getDaysInMonth(year: number, month: number) {
   return new Date(year, month + 1, 0).getDate();
 }
 
-export function CalendarPreview({ taskMap }: Props) {
+/**
+ * Cleanly renders the task label, hiding redundant Surah prefixes
+ * for large units or Surah-level revisions.
+ */
+function TaskLabel({ task }: { task: DailyTask | ProjectedTask }) {
+  const surahName = SURAH_NAMES[task.surahNumber - 1];
+  const isLargeUnit = ['Juz', 'Para', 'Manzil'].includes(task.ruType || '');
+  const isSurahUnit = task.ruType === 'Surah';
+  
+  // If the label identifies itself (e.g. "Al-Baqarah" or "Juz 1"), 
+  // we don't need a Surah prefix based on the starting word.
+  const isSelfIdentified = task.displayLabel.includes(surahName || '___') || isLargeUnit;
+
+  if (isSelfIdentified) {
+    return <span>{task.displayLabel}</span>;
+  }
+
+  return (
+    <>
+      <span style={{ fontWeight: 700 }}>{surahName}:</span> {task.displayLabel}
+    </>
+  );
+}
+
+export function CalendarPreview({ taskMap, scriptStyle }: Props) {
   const today = new Date();
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
@@ -63,14 +118,37 @@ export function CalendarPreview({ taskMap }: Props) {
   };
 
   const calendarCells = useMemo(() => {
+    // 0. Load projections
+    const raw = localStorage.getItem('schedules');
+    const schedules: Schedule[] = raw ? JSON.parse(raw) : [];
+    const projections: Record<string, ProjectedTask[]> = {};
+    
+    schedules.forEach(s => {
+      if (s.isDeleted) return;
+      s.revisionList.forEach(ru => {
+        if (ru.isDeleted) return;
+        const pts = generateProjectedSUs(ru, metadata as any, scriptStyle);
+        pts.forEach(pt => {
+          if (!projections[pt.dateKey]) projections[pt.dateKey] = [];
+          projections[pt.dateKey].push(pt);
+        });
+      });
+    });
+
     const daysInMonth = getDaysInMonth(currentYear, currentMonth);
     const startDayOfWeek = new Date(currentYear, currentMonth, 1).getDay(); // 0 = Sun
     
-    const cells: { dateKey: string | null; day: number | null; type: DayTaskType; dailyTasks: DailyTask[] }[] = [];
+    const cells: { 
+      dateKey: string | null; 
+      day: number | null; 
+      type: DayTaskType; 
+      dailyTasks: DailyTask[];
+      projectedTasks: ProjectedTask[];
+    }[] = [];
     
     // Padding start
     for (let i = 0; i < startDayOfWeek; i++) {
-       cells.push({ dateKey: null, day: null, type: 'empty', dailyTasks: [] });
+       cells.push({ dateKey: null, day: null, type: 'empty', dailyTasks: [], projectedTasks: [] });
     }
     
     // Days of month
@@ -82,15 +160,16 @@ export function CalendarPreview({ taskMap }: Props) {
          d === today.getDate();
          
        const dayTasks = taskMap[dateKey] || [];
-       let type: DayTaskType = isToday ? 'today' : (dayTasks.length > 0 ? 'hasTasks' : 'normal');
+       const dayProjections = projections[dateKey] || [];
+       let type: DayTaskType = isToday ? 'today' : ((dayTasks.length > 0 || dayProjections.length > 0) ? 'hasTasks' : 'normal');
 
-       cells.push({ dateKey, day: d, type, dailyTasks: dayTasks });
+       cells.push({ dateKey, day: d, type, dailyTasks: dayTasks, projectedTasks: dayProjections });
     }
     
     // Padding end (to complete 5 or 6 rows)
     const trailing = (7 - (cells.length % 7)) % 7;
     for (let i = 0; i < trailing; i++) {
-        cells.push({ dateKey: null, day: null, type: 'empty', dailyTasks: [] });
+        cells.push({ dateKey: null, day: null, type: 'empty', dailyTasks: [], projectedTasks: [] });
     }
     
     return cells;
@@ -126,19 +205,49 @@ export function CalendarPreview({ taskMap }: Props) {
             {calendarCells.map((c, i) => (
               <div 
                 key={i} 
-                className={`sd-cal-day ${c.day ? 'sd-cal-day--active' : ''} ${TYPE_CLASS[c.type]} ${c.dailyTasks.length > 0 ? 'sd-cal-day--clickable' : ''}`}
+                className={`sd-cal-day ${c.day ? 'sd-cal-day--active' : ''} ${c.type === 'today' ? 'sd-cal-day--today' : ''} ${c.type === 'empty' ? 'sd-cal-day--empty' : ''} ${c.dailyTasks.length > 0 ? 'sd-cal-day--clickable' : ''}`}
                 onClick={() => { if (c.dateKey) openModal(c.dateKey) }}
               >
                  {c.day && (
                    <>
                      <span className="sd-cal-day-num">{c.day}</span>
                      <div className="sd-cal-task-list">
-                       {c.dailyTasks.map((t, idx) => (
-                         <div key={idx} className="sd-cal-task-label" title={`${SURAH_NAMES[t.surahNumber - 1]}: ${t.displayLabel}`}>
-                           <span style={{fontWeight: 700}}>{SURAH_NAMES[t.surahNumber - 1]}:</span> {t.displayLabel}
-                         </div>
-                       ))}
-                       {c.dailyTasks.length === 0 && notes[c.dateKey as string] && (
+                       {c.dailyTasks.map((t, idx) => {
+                         const theme = getTaskStyles(t.ruId);
+                         return (
+                           <div 
+                             key={idx} 
+                             className="sd-cal-task-label" 
+                             style={{
+                               background: theme.bg,
+                               border: `1px solid ${theme.border}`,
+                               color: theme.tx
+                             }}
+                             title={`${SURAH_NAMES[t.surahNumber - 1]}: ${t.displayLabel}`}
+                           >
+                             <TaskLabel task={t} />
+                           </div>
+                         );
+                       })}
+                       {c.projectedTasks.map((t, idx) => {
+                         const theme = getProjectedStyles(t.ruId);
+                         return (
+                           <div 
+                             key={`p-${idx}`} 
+                             className="sd-cal-task-label sd-cal-task-label--projected" 
+                             style={{
+                               background: theme.bg,
+                               border: `1px dashed ${theme.border}`,
+                               color: theme.tx
+                             }}
+                             title={`[Projected] ${SURAH_NAMES[t.surahNumber - 1]}: ${t.displayLabel}`}
+                           >
+                             <span style={{fontSize: '9px', opacity: 0.6, marginRight: '4px'}}>NEXT:</span>
+                             <TaskLabel task={t} />
+                           </div>
+                         );
+                       })}
+                       {c.dailyTasks.length === 0 && c.projectedTasks.length === 0 && notes[c.dateKey as string] && (
                           <div className="sd-cal-task-label sd-cal-task-label--note">Has Notes</div>
                        )}
                      </div>

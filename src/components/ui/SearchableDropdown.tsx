@@ -18,6 +18,8 @@ interface SearchableDropdownProps {
   className?: string;
   /** If provided, a "selected" visual state is shown */
   activeValue?: string | null;
+  /** Disable interactions */
+  disabled?: boolean;
 }
 
 export function SearchableDropdown({
@@ -27,11 +29,14 @@ export function SearchableDropdown({
   selectedValue,
   className = '',
   activeValue,
+  disabled = false,
 }: SearchableDropdownProps) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [isPristine, setIsPristine] = useState(true);
   const listRef = useRef<HTMLDivElement>(null);
+
+  if (disabled && open) setOpen(false);
 
   // When opened fresh (pristine), show all; once typing begins, filter
   const filtered = useMemo(() => {
@@ -72,7 +77,7 @@ export function SearchableDropdown({
   };
 
   return (
-    <div className={`sdd-container ${className}`}>
+    <div className={`sdd-container ${disabled ? 'sdd-container--disabled' : ''} ${className}`}>
       <div className="sdd-input-wrap">
         <Search size={14} className="sdd-search-icon" />
         <input
@@ -80,6 +85,7 @@ export function SearchableDropdown({
           className="sdd-input"
           value={displayValue}
           placeholder={placeholder}
+          disabled={disabled}
           onChange={e => {
             setIsPristine(false);
             setQuery(e.target.value);

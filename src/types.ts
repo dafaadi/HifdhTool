@@ -19,6 +19,7 @@ import type { Card, ReviewLog } from 'ts-fsrs';
 
 export interface ScheduleUnit {
   id: string;
+  ruId?: string;
   wordIdRange: [number, number];
   surahNumber: number;
   ayahRange?: [number, number];
@@ -43,6 +44,8 @@ export interface RevisionUnitData {
   createdAt: string;
   isDeleted: boolean;
   priorityValue: number;
+  routineDurationDays: number;
+  ruRange: [number, number];
 }
 
 export interface Schedule {

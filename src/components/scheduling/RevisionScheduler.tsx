@@ -3,7 +3,8 @@ import { Shuffle, GripVertical, ChevronDown, X as XIcon } from 'lucide-react';
 import { SearchableDropdown, type DropdownOption } from '../ui/SearchableDropdown';
 import {
   type ScriptStyle, type QuranMetadata, type DailyTask,
-  SURAH_NAMES, isFullyContained, countSubUnits, distributeSUs, getValidSUs
+  SURAH_NAMES, isFullyContained, countSubUnits, getValidSUs,
+  distributeSequentially
 } from '../../utils/memorizationEngine';
 import type { Schedule, RevisionUnitData } from '../../types';
 import { createBaselineFSRSCard } from '../../utils/fsrsLogic';
@@ -30,6 +31,7 @@ function buildRevisionOptions(
   unitType: string,
   scriptStyle: ScriptStyle,
   mergedRanges: number[][],
+  excludedKeys: Set<string>
 ): DropdownOption[] {
   if (unitType === 'Ayah') return [];
 
@@ -59,29 +61,37 @@ function buildRevisionOptions(
 
   return Object.entries(map)
     .map(([k, r]) => ({ label: labelFn(k), value: k, range: r as [number, number] }))
-    .filter(opt => isFullyContained(opt.range, mergedRanges));
+    .filter(opt => {
+      const isMemorized = isFullyContained(opt.range, mergedRanges);
+      const isAlreadyAdded = excludedKeys.has(`${unitType}-${opt.value}`);
+      return isMemorized && !isAlreadyAdded;
+    });
 }
 
 function calculateDailyLoad(
-  ruRange: [number, number],
-  suType: string,
-  durationDays: number,
-  scriptStyle: ScriptStyle
-): string {
-  if (durationDays < 1) return '0 / day';
+  itemSUs: number,
+  totalQueueSUs: number,
+  globalDurationDays: number,
+  suType: string
+): { main: string; sub: string | null } {
+  if (globalDurationDays < 1 || totalQueueSUs === 0 || itemSUs === 0) {
+    return { main: `0 ${suType}/day`, sub: null };
+  }
   
-  const totalSUs = countSubUnits(ruRange, suType, scriptStyle, metadata);
-  if (totalSUs === 0) return `0 ${suType}s/d`;
-  if (durationDays >= totalSUs) return `~1 ${suType}/d`; // Less than 1 per day on average
+  // Assigned days for this RU is proportional to its share of the total SUs
+  const assignedDays = Math.max(1, Math.round((itemSUs / totalQueueSUs) * globalDurationDays));
 
-  const base = Math.floor(totalSUs / durationDays);
-  const remainder = totalSUs % durationDays;
+  const base = Math.floor(itemSUs / assignedDays);
+  const remainder = itemSUs % assignedDays;
+  const unitSuffix = base === 1 ? suType : `${suType}s`;
 
   if (remainder === 0) {
-    return `~${base} ${suType}s/d`;
+    return { main: `~${base} ${unitSuffix.toLowerCase()}/day`, sub: null };
   } else {
-    // remainder days will take (base + 1), others will take (base)
-    return `~${base} ${suType}s/d (last ${remainder}d: ${base + 1})`;
+    return { 
+      main: `~${base} ${unitSuffix.toLowerCase()}/day`, 
+      sub: `(last ${remainder} ${remainder === 1 ? 'day' : 'days'}: ${base + 1})` 
+    };
   }
 }
 
@@ -97,6 +107,7 @@ interface RevisionItem {
 interface RuListItemProps {
   item: RevisionItem;
   index: number;
+  totalQueueSUs: number;
   scriptStyle: ScriptStyle;
   durationDays: number;
   isCustomOrder: boolean;
@@ -105,22 +116,24 @@ interface RuListItemProps {
   onDragStart: (e: React.DragEvent, index: number) => void;
   onDragOver: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent, index: number) => void;
+  disabled?: boolean;
 }
 
 function RuListItem({
-  item, index, scriptStyle, durationDays, isCustomOrder,
-  onSuChange, onRemove, onDragStart, onDragOver, onDrop
+  item, index, totalQueueSUs, scriptStyle, durationDays, isCustomOrder,
+  onSuChange, onRemove, onDragStart, onDragOver, onDrop, disabled = false
 }: RuListItemProps) {
   const suOptions = getValidSUs(item.ruType, item.range, scriptStyle, metadata);
+  const itemSUs = countSubUnits(item.range, item.suType, scriptStyle, metadata);
 
   return (
     <div
-      className="sd-ru-item"
-      draggable={isCustomOrder}
-      onDragStart={(e) => isCustomOrder && onDragStart(e, index)}
-      onDragOver={isCustomOrder ? onDragOver : undefined}
-      onDrop={(e) => isCustomOrder && onDrop(e, index)}
-      style={{ opacity: isCustomOrder ? 1 : 0.95 }}
+      className={`sd-ru-item ${disabled ? 'sd-ru-item--disabled' : ''}`}
+      draggable={isCustomOrder && !disabled}
+      onDragStart={(e) => (isCustomOrder && !disabled) && onDragStart(e, index)}
+      onDragOver={(isCustomOrder && !disabled) ? onDragOver : undefined}
+      onDrop={(e) => (isCustomOrder && !disabled) && onDrop(e, index)}
+      style={{ opacity: (isCustomOrder && !disabled) ? 1 : (disabled ? 0.5 : 0.95) }}
     >
       <div 
         className="sd-ru-handle" 
@@ -130,23 +143,36 @@ function RuListItem({
         <span className="sd-ru-serial">{index + 1}</span>
         <GripVertical size={13} />
       </div>
-      <span className="sd-ru-name">{item.ruLabel}</span>
+      <div className="sd-ru-content-main">
+        <span className="sd-ru-name">{item.ruLabel}</span>
+        <span className="sd-ru-substats">Total {item.suType}s: {itemSUs}</span>
+      </div>
       <div className="sd-select-wrap">
         <select
           className="sd-select"
           value={item.suType}
+          disabled={disabled}
           onChange={(e) => onSuChange(item.id, e.target.value)}
         >
           {suOptions.map(u => <option key={u} value={u}>{u}</option>)}
         </select>
         <ChevronDown size={11} className="sd-select-chevron" />
       </div>
-      <span className="sd-ru-task" style={{ fontSize: '0.75rem', fontWeight: 500 }}>
-        {calculateDailyLoad(item.range, item.suType, durationDays, scriptStyle)}
-      </span>
+      <div className="sd-ru-task-group">
+        {(() => {
+          const { main, sub } = calculateDailyLoad(itemSUs, totalQueueSUs, durationDays === '' ? 1 : durationDays, item.suType);
+          return (
+            <>
+              <span className="sd-ru-task-main">{main}</span>
+              {sub && <span className="sd-ru-task-sub">{sub}</span>}
+            </>
+          );
+        })()}
+      </div>
       <button
         className="sd-ru-remove"
         title="Remove from queue"
+        disabled={disabled}
         onClick={() => onRemove(item.id)}
       >
         <XIcon size={12} />
@@ -168,8 +194,56 @@ export function RevisionScheduler({ scriptStyle, onGenerateTasks, onClearTasks }
   const [unitType, setUnitType] = useState<string>('Surah');
   const [isCustomOrder, setIsCustomOrder] = useState<boolean>(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-  
   const [hasGenerated, setHasGenerated] = useState<boolean>(false);
+  const [scheduledRUs, setScheduledRUs] = useState<Set<string>>(new Set());
+  
+  const loadSchedules = React.useCallback(() => {
+    try {
+      const raw = localStorage.getItem('schedules');
+      if (!raw) {
+        setScheduledRUs(new Set());
+        return;
+      }
+      const schedules: Schedule[] = JSON.parse(raw);
+      const set = new Set<string>();
+      for (const s of schedules) {
+        if (s.isDeleted) continue;
+        for (const ru of s.revisionList) {
+          if (ru.isDeleted) continue;
+          set.add(`${ru.unitType}-${ru.unitValue}`);
+        }
+      }
+      setScheduledRUs(set);
+    } catch {
+      setScheduledRUs(new Set());
+    }
+  }, []);
+
+  React.useEffect(() => {
+    loadSchedules();
+    window.addEventListener('hifdhSchedulesUpdated', loadSchedules);
+    return () => window.removeEventListener('hifdhSchedulesUpdated', loadSchedules);
+  }, [loadSchedules]);
+  
+  const maxAllowedDays = useMemo(() => {
+    if (revisionQueue.length === 0) return 365;
+    const counts = revisionQueue.map(item => countSubUnits(item.range, item.suType, scriptStyle, metadata));
+    const totalCount = counts.reduce((a, b) => a + b, 0);
+    return (totalCount > 0 && isFinite(totalCount)) ? totalCount : 365;
+  }, [revisionQueue, scriptStyle]);
+
+  // Cap duration if it exceeds new limit
+  React.useEffect(() => {
+    if (durationDays !== '' && durationDays > maxAllowedDays) {
+      setDurationDays(maxAllowedDays);
+    }
+  }, [maxAllowedDays, durationDays]);
+
+  const durationOptions = useMemo(() => {
+    if (maxAllowedDays <= 0) return [];
+    // Generate sequential options 1...N
+    return Array.from({ length: maxAllowedDays }, (_, i) => i + 1);
+  }, [maxAllowedDays]);
 
   const activeUnits = scriptStyle === 'madani' ? MADANI_UNITS : INDOPAK_UNITS;
   const [mergedRanges, setMergedRanges] = useState<number[][]>(() => loadStored());
@@ -180,10 +254,12 @@ export function RevisionScheduler({ scriptStyle, onGenerateTasks, onClearTasks }
     return () => window.removeEventListener('hifdhRangesV2Updated', handleUpdate);
   }, []);
 
-  const searchOptions = useMemo(
-    () => buildRevisionOptions(unitType, scriptStyle, mergedRanges),
-    [unitType, scriptStyle, mergedRanges]
-  );
+  const searchOptions = useMemo(() => {
+    const queueSet = new Set(revisionQueue.map(item => `${item.ruType}-${item.ruValue}`));
+    // Combine permanently scheduled and currently in-queue RUs
+    const combinedExcluded = new Set([...Array.from(scheduledRUs), ...Array.from(queueSet)]);
+    return buildRevisionOptions(unitType, scriptStyle, mergedRanges, combinedExcluded);
+  }, [unitType, scriptStyle, mergedRanges, scheduledRUs, revisionQueue]);
 
   const handleSelect = (opt: DropdownOption | null) => {
     if (!opt) return;
@@ -253,15 +329,22 @@ export function RevisionScheduler({ scriptStyle, onGenerateTasks, onClearTasks }
     const taskMap: Record<string, DailyTask[]> = {};
     const baseDate = new Date(startDateString);
     
-    for (const item of revisionQueue) {
-      const daysArr = distributeSUs(item.range, item.suType, durationDays as number, scriptStyle, metadata, item.ruType, item.ruLabel, startDateString);
-      for (let i = 0; i < daysArr.length; i++) {
-        const d = new Date(baseDate);
-        d.setDate(d.getDate() + i);
-        const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        if (!taskMap[dateKey]) taskMap[dateKey] = [];
-        taskMap[dateKey].push(daysArr[i]);
-      }
+    const ruItems = revisionQueue.map(item => ({
+      id: item.id,
+      ruRange: item.range,
+      suType: item.suType,
+      ruLabel: item.ruLabel,
+      ruType: item.ruType,
+      ruValue: item.ruValue
+    }));
+
+    const allDays = distributeSequentially(ruItems, durationDays as number, scriptStyle, metadata, startDateString);
+    
+    for (const task of allDays) {
+      const d = new Date(task.fsrsCard.due);
+      const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      if (!taskMap[dateKey]) taskMap[dateKey] = [];
+      taskMap[dateKey].push(task);
     }
     
     onGenerateTasks(taskMap);
@@ -274,27 +357,45 @@ export function RevisionScheduler({ scriptStyle, onGenerateTasks, onClearTasks }
 
   // "Confirm" persists the preview tasks permanently
   const handleConfirmSchedule = () => {
-    // 1. Build the formal structures
+    const ruItems = revisionQueue.map(item => ({
+      id: item.id,
+      ruRange: item.range,
+      suType: item.suType,
+      ruLabel: item.ruLabel,
+      ruType: item.ruType,
+      ruValue: item.ruValue
+    }));
+
+    const allScheduledTasks = distributeSequentially(ruItems, durationDays as number, scriptStyle, metadata, startDateString);
+
     const revisionList: RevisionUnitData[] = revisionQueue.map((item, idx) => {
-      // Re-run distribution purely for the persisted arrays
-      const scheduleList = distributeSUs(item.range, item.suType, durationDays as number, scriptStyle, metadata, item.ruType, undefined, startDateString);
+      // Filter tasks belonging to THIS revision unit
+      const myTasks = allScheduledTasks.filter(t => t.ruId === item.id);
       const fsrsCard = createBaselineFSRSCard('normal');
 
+      // Anchor RU due date to 7 days after its FIRST scheduled task (not today's date)
+      if (myTasks.length > 0) {
+        const earliestTime = Math.min(...myTasks.map(t => new Date(t.fsrsCard.due).getTime()));
+        const anchorDate = new Date(earliestTime);
+        fsrsCard.due = new Date(anchorDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+      }
+      
+      // Calculate active days for this RU specifically
+      const uniqueDays = new Set(myTasks.map(t => new Date(t.fsrsCard.due).toDateString())).size;
+
       return {
-        id: crypto.randomUUID(),
+        id: item.id, // Keep original ID for color consistency
         unitType: item.ruType,
         unitValue: item.ruValue,
         scheduledUnitType: item.suType,
-        scheduleList: scheduleList.map(t => {
-          // ensure UI-only 'details' property isn't structurally saved
-          const { ruLabel, details, ...coreUnit } = t;
-          return coreUnit;
-        }),
+        scheduleList: myTasks, // Don't strip metadata
         fsrsCard,
         reviewLogs: [],
         createdAt: new Date().toISOString(),
         isDeleted: false,
-        priorityValue: idx + 1 // Queue ranking 1...N
+        priorityValue: idx + 1,
+        routineDurationDays: uniqueDays,
+        ruRange: item.range
       };
     });
 
@@ -331,14 +432,17 @@ export function RevisionScheduler({ scriptStyle, onGenerateTasks, onClearTasks }
         <span className="sd-badge sd-badge--strengthening">STRENGTHENING</span>
       </div>
 
-      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: '8px' }}>
-        <div style={{ flex: '0 0 auto' }}>
+      {/* Row 1: Controls for adding to queue */}
+      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: '12px' }}>
+        <div style={{ flex: '0 0 140px' }}>
           <label className="sd-field-label">UNIT TYPE</label>
           <div className="sd-select-wrap">
             <select
               className="sd-select"
               value={unitType}
+              disabled={hasGenerated}
               onChange={e => setUnitType(e.target.value)}
+              style={{ width: '100%' }}
             >
               {activeUnits.map(u => <option key={u} value={u}>{u}</option>)}
             </select>
@@ -346,7 +450,7 @@ export function RevisionScheduler({ scriptStyle, onGenerateTasks, onClearTasks }
           </div>
         </div>
 
-        <div style={{ flex: 1, minWidth: '150px' }}>
+        <div style={{ flex: 1, minWidth: '200px' }}>
           <label className="sd-field-label">CHOOSE (Only previously memorized)</label>
           <div className="pm-dropdown">
             <SearchableDropdown
@@ -354,29 +458,40 @@ export function RevisionScheduler({ scriptStyle, onGenerateTasks, onClearTasks }
               onSelect={handleSelect}
               selectedValue={null}
               activeValue={null}
+              disabled={hasGenerated}
               placeholder={`Add ${unitType}...`}
             />
           </div>
         </div>
-        
-        <div style={{ flex: '0 0 auto', maxWidth: '100px' }}>
+      </div>
+
+      {/* Row 2: Global Configuration */}
+      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: '12px' }}>
+        <div style={{ flex: 1, minWidth: '140px' }}>
           <label className="sd-field-label">DURATION (DAYS)</label>
-          <input 
-            type="number" className="sd-select" style={{width: '100%', boxSizing: 'border-box'}}
-            min={1} value={durationDays} 
-            onChange={e => {
-              const val = e.target.value;
-              setDurationDays(val === '' ? '' : Math.max(1, parseInt(val) || 1));
-            }} 
-          />
+          <div className="sd-select-wrap">
+            <select 
+              className="sd-select" 
+              style={{ width: '100%' }}
+              value={durationDays} 
+              disabled={hasGenerated}
+              onChange={e => setDurationDays(parseInt(e.target.value) || 1)}
+            >
+              {durationOptions.map(o => (
+                 <option key={o} value={o}>{o} Day{o > 1 ? 's' : ''}</option>
+              ))}
+            </select>
+            <ChevronDown size={11} className="sd-select-chevron" />
+          </div>
         </div>
 
-        <div style={{ flex: '0 0 auto' }}>
+        <div style={{ flex: 1, minWidth: '140px' }}>
           <label className="sd-field-label">START DATE</label>
           <input 
             type="date" 
-            className="sd-select" 
-            style={{ width: '100%', boxSizing: 'border-box', height: '54px' }}
+            className="sd-select sd-date-input" 
+            style={{ width: '100%', boxSizing: 'border-box' }}
+            disabled={hasGenerated}
             value={startDateString} 
             onChange={e => setStartDateString(e.target.value)} 
           />
@@ -384,8 +499,8 @@ export function RevisionScheduler({ scriptStyle, onGenerateTasks, onClearTasks }
       </div>
 
       <div className="sd-checkbox-group">
-         <label className="sd-checkbox-label">
-           <input type="checkbox" checked={isCustomOrder} onChange={handleToggleOrder} className="sd-checkbox" />
+         <label className={`sd-checkbox-label ${hasGenerated ? 'sd-checkbox-label--disabled' : ''}`}>
+           <input type="checkbox" checked={isCustomOrder} disabled={hasGenerated} onChange={handleToggleOrder} className="sd-checkbox" />
            Custom Priority (Drag & Drop)
          </label>
       </div>
@@ -401,9 +516,11 @@ export function RevisionScheduler({ scriptStyle, onGenerateTasks, onClearTasks }
             key={item.id} 
             item={item} 
             index={idx} 
+            totalQueueSUs={maxAllowedDays} // maxAllowedDays is the sum of all SUs
             scriptStyle={scriptStyle}
             durationDays={durationDays === '' ? 1 : durationDays}
             isCustomOrder={isCustomOrder}
+            disabled={hasGenerated}
             onSuChange={handleSuChange}
             onRemove={handleRemove}
             onDragStart={onDragStart}

@@ -83,10 +83,22 @@
   gap: 0.75rem;
 }
 
+.sm-card-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .sm-card-title {
   font-size: 1.1rem;
   font-weight: 700;
   color: var(--text-primary);
+}
+
+.sm-card-meta {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-secondary);
 }
 
 .sm-title-input {
@@ -141,6 +153,28 @@
 /* ── LEVEL 2: Revision Unit ──────────────────────────────────────────────────── */
 .sm-card-body {
   padding: 0 1.5rem 1.5rem 1.5rem;
+}
+
+.sm-global-summary-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.25rem;
+  padding-right: 2.75rem; 
+}
+
+.sm-global-next-due-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  width: 180px; 
+}
+
+.sm-summary-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  letter-spacing: 0.08em;
 }
 
 .sm-ru-container {

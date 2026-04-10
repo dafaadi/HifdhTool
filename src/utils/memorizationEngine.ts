@@ -150,9 +150,33 @@ export function countSubUnits(
   metadata: QuranMetadata
 ): number {
   if (suType === 'Ayah') {
-    // Math for ayahs would require deep ayah metadata. For now, estimate or return fixed number.
-    // If you need exact ayahs in a juz, it's roughly ~200. We will support it properly later.
-    return 100; 
+    const surahDetail = (metadata as any).madani?.surah_detail as
+      Record<string, { weight_pages: number; ayah_ranges: Record<string, [number, number]> }>;
+    
+    if (!surahDetail) return 100;
+
+    const [tS, tE] = targetRange;
+    const surahMap = (metadata as any).madani?.surah as MetadataMap;
+    const pageMap = (metadata as any).madani?.page as MetadataMap;
+    let count = 0;
+
+    for (const [surahKey, detail] of Object.entries(surahDetail)) {
+      const surahRange = surahMap?.[surahKey];
+      if (!surahRange) continue;
+      if (surahRange[1] < tS || surahRange[0] > tE) continue;
+
+      for (const pageKey of Object.keys(detail.ayah_ranges)) {
+        const ayahRange = detail.ayah_ranges[pageKey];
+        const pageNum = parseInt(pageKey.replace('page_', ''), 10);
+        const pageWordRange = pageMap?.[String(pageNum)];
+        if (!pageWordRange) continue;
+        if (pageWordRange[1] < tS || pageWordRange[0] > tE) continue;
+        
+        // Sum total individual ayahs instead of counting page-level entries
+        count += (ayahRange[1] - ayahRange[0] + 1);
+      }
+    }
+    return count;
   }
 
   const { madani, indopak } = metadata;
@@ -180,13 +204,125 @@ export function countSubUnits(
   return count;
 }
 
-import type { ScheduleUnit } from '../types';
+import type { ScheduleUnit, RevisionUnitData } from '../types';
 import { createBaselineFSRSCard } from './fsrsLogic';
 
 export type DailyTask = ScheduleUnit & {
-  ruLabel?: string;
+  createdAt: string;
+  isDeleted: boolean;
   details: string[]; // Keep details for UI rendering in modal
+  ruId?: string;
+  ruType?: string;
+  ruLabel?: string;
 };
+
+export interface ProjectedTask {
+  dateKey: string; // YYYY-MM-DD
+  ruLabel: string;
+  displayLabel: string;
+  ruId: string;
+  surahNumber: number;
+  ruType: string;
+}
+
+export interface SUEntry {
+  key: string;
+  label: string;
+  range: [number, number];
+  surahNumber: number;
+}
+
+/**
+ * Collects all sub-unit (SU) entries for a given Revision Unit (RU) range and SU type.
+ */
+export function collectSUEntries(
+  ruRange: [number, number],
+  suType: string,
+  scriptStyle: ScriptStyle,
+  metadata: QuranMetadata
+): SUEntry[] {
+  const [tS, tE] = ruRange;
+
+  if (suType === 'Ayah') {
+    const surahDetail = (metadata as any).madani?.surah_detail as
+      Record<string, { weight_pages: number; ayah_ranges: Record<string, [number, number]> }>;
+    if (!surahDetail) return [];
+
+    const surahMap = (metadata as any).madani?.surah as Record<string, [number, number]>;
+    const pageMap = (metadata as any).madani?.page as MetadataMap;
+    const entries: SUEntry[] = [];
+
+    for (const [surahKey, detail] of Object.entries(surahDetail)) {
+      const surahRange = surahMap?.[surahKey];
+      // Skip if surah is entirely outside ruRange
+      if (!surahRange || surahRange[1] < tS || surahRange[0] > tE) continue;
+
+      const surahNum = parseInt(surahKey, 10);
+
+      // We need to iterate pages in order
+      const sortedPageKeys = Object.keys(detail.ayah_ranges).sort((a, b) => 
+        parseInt(a.replace('page_', ''), 10) - parseInt(b.replace('page_', ''), 10)
+      );
+
+      for (const pageKey of sortedPageKeys) {
+        const ayahRange = detail.ayah_ranges[pageKey];
+        const pageNum = parseInt(pageKey.replace('page_', ''), 10);
+        const pageWordRange = pageMap?.[String(pageNum)];
+        if (!pageWordRange || pageWordRange[1] < tS || pageWordRange[0] > tE) continue;
+
+        // Create one entry per individual ayah
+        for (let a = ayahRange[0]; a <= ayahRange[1]; a++) {
+          entries.push({
+            key: `${surahKey}-${a}`,
+            label: `Ayah ${a}`,
+            range: pageWordRange, // Atomic range is the page since we lack per-ayah word maps
+            surahNumber: surahNum,
+          });
+        }
+      }
+    }
+    return entries;
+  }
+
+  const { madani, indopak } = metadata;
+  let map: MetadataMap | undefined;
+  if (scriptStyle === 'madani') {
+    map = (madani as any)[suType.toLowerCase()];
+    if (suType === "Rub'") map = madani.rub;
+  } else {
+    map = (indopak as any)[suType.toLowerCase()];
+  }
+
+  if (!map) return [];
+
+  const entries: SUEntry[] = [];
+  let labelFn = (k: string) => `${suType} ${k}`;
+  if (suType === 'Surah') labelFn = k => `${k}. ${SURAH_NAMES[+k - 1] ?? ''}`;
+
+  const sortedEntries = Object.entries(map).sort((a, b) => a[1][0] - b[1][0]);
+  for (const [k, r] of sortedEntries) {
+    if (r[0] <= tE && r[1] >= tS) {
+      // Determine primary surah for this SU
+      const surahMap = (scriptStyle === 'madani' ? madani.surah : indopak.surah) as MetadataMap;
+      let surahNumber = 1;
+      for (const [sk, sr] of Object.entries(surahMap)) {
+        if (sr[0] <= r[0] && sr[1] >= r[0]) {
+          surahNumber = parseInt(sk, 10);
+          break;
+        }
+      }
+
+      entries.push({
+        key: k,
+        label: labelFn(k),
+        range: r as [number, number],
+        surahNumber,
+      });
+    }
+  }
+
+  return entries;
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 2c. getValidSUs — Smart SU dropdown population
@@ -213,16 +349,28 @@ export function getValidSUs(
   const hierarchy = scriptStyle === 'madani' ? MADANI_SU_HIERARCHY : INDOPAK_SU_HIERARCHY;
   const ruIdx = hierarchy.indexOf(ruType as any);
   
-  // Start from the item AFTER ruType in hierarchy
-  const candidates = ruIdx === -1 ? [...hierarchy] : hierarchy.slice(ruIdx + 1);
+  // 1. Initial candidates: units that are naturally below ruType in the list
+  let candidates: string[] = ruIdx === -1 ? [...hierarchy] : [...hierarchy.slice(ruIdx + 1)];
   
-  // Filter to only include SUs that have >1 sub-unit in the RU's range
-  // (or are 'Ayah' / 'Page' which are always valid if they're below the RU)
-  return candidates.filter(suType => {
-    if (suType === 'Ayah') return true; // Always valid as lowest granularity
+  // 2. Special Expansion for 'Surah': Large surahs (Baqarah, etc.) are bigger 
+  // than Rubs or even Hizbs. We allow these as SUs if they actually fit.
+  if (ruType === 'Surah') {
+    if (scriptStyle === 'madani') {
+      candidates = ['Juz', 'Hizb', "Rub'", ...candidates];
+    } else {
+      candidates = ['Para', 'Ruku', ...candidates];
+    }
+  }
+  
+  // Deduplicate
+  const uniqueCandidates = Array.from(new Set(candidates));
+
+  // 3. Filter to only include SUs that have >1 sub-unit in the RU's range
+  return uniqueCandidates.filter(suType => {
+    if (suType === 'Ayah') return true; 
     const count = countSubUnits(ruRange, suType, scriptStyle, metadata);
     // Must have at least 2 sub-units in range to make scheduling meaningful,
-    // unless the RU is itself a Surah (then 1 Page is valid)
+    // unless the RU is itself a Surah (then 1 Page/Hizb etc. might be the content)
     if (ruType === 'Surah') return count >= 1;
     return count >= 2;
   });
@@ -288,9 +436,37 @@ export function distributeSUs(
     const slice = overlapping.slice(currentIndex, currentIndex + countForDay);
     currentIndex += countForDay;
     
+    if (slice.length === 0) {
+      const baseDate = startDateString 
+        ? (() => {
+            const [y, m, d] = startDateString.split('-').map(Number);
+            return new Date(y, m - 1, d);
+          })()
+        : new Date();
+      baseDate.setDate(baseDate.getDate() + i);
+      const fsrsCard = createBaselineFSRSCard('normal');
+      fsrsCard.due = baseDate;
+
+      days.push({
+        id: crypto.randomUUID(),
+        wordIdRange: [0, 0],
+        surahNumber: 1,
+        pageNumbers: [],
+        displayLabel: `0 ${suType}s`,
+        timePreference: 'Any',
+        fsrsCard,
+        reviewLogs: [],
+        note: '',
+        createdAt: new Date().toISOString(),
+        isDeleted: false,
+        details: [],
+        ruLabel,
+      });
+      continue;
+    }
+
     let shortLabel = '';
-    if (slice.length === 0) shortLabel = `0 ${suType}s`;
-    else if (slice.length === 1) {
+    if (slice.length === 1) {
       if (suType === 'Surah') shortLabel = SURAH_NAMES[+slice[0].key - 1] ?? slice[0].label;
       else shortLabel = slice[0].label;
     }
@@ -303,7 +479,7 @@ export function distributeSUs(
          shortLabel = `${suType}s ${first.key}–${last.key}`;
       }
     }
-    
+
     const totalRange: [number, number] = [slice[0].range[0], slice[slice.length - 1].range[1]];
 
     // Build page numbers
@@ -325,7 +501,12 @@ export function distributeSUs(
     const displayLabel = shortLabel;
 
     // Get sequential Date
-    const baseDate = startDateString ? new Date(startDateString) : new Date();
+    const baseDate = startDateString 
+      ? (() => {
+          const [y, m, d] = startDateString.split('-').map(Number);
+          return new Date(y, m - 1, d);
+        })()
+      : new Date();
     baseDate.setDate(baseDate.getDate() + i);
 
     const fsrsCard = createBaselineFSRSCard('normal');
@@ -360,9 +541,8 @@ export function distributeSUs(
 /**
  * Uses surah_detail[N].ayah_ranges (keyed "page_N" → [firstAyah, lastAyah])
  * to distribute exact ayah bounds across durationDays daily buckets.
- * Works for any ruRange that covers one or more complete/partial surahs.
  */
-function distributeAyahs(
+export function distributeAyahs(
   ruRange: [number, number],
   durationDays: number,
   metadata: QuranMetadata,
@@ -370,96 +550,67 @@ function distributeAyahs(
   ruLabel?: string,
   startDateString?: string
 ): DailyTask[] {
-  const surahDetail = (metadata as any).madani?.surah_detail as
-    Record<string, { weight_pages: number; ayah_ranges: Record<string, [number, number]> }>;
-
-  if (!surahDetail) {
-    return [];
-  }
-
-  const [rS, rE] = ruRange;
-  const surahMap = (metadata as any).madani?.surah as Record<string, [number, number]>;
-
-  // Collect all (surahNum, pageKey, ayahStart, ayahEnd) entries that fall within ruRange
-  const ayahEntries: { surahNum: number; pageNum: number; firstAyah: number; lastAyah: number }[] = [];
-
-  for (const [surahKey, detail] of Object.entries(surahDetail)) {
-    const surahRange = surahMap?.[surahKey];
-    if (!surahRange) continue;
-    // Skip if surah is entirely outside ruRange
-    if (surahRange[1] < rS || surahRange[0] > rE) continue;
-
-    for (const [pageKey, ayahRange] of Object.entries(detail.ayah_ranges)) {
-      const pageNum = parseInt(pageKey.replace('page_', ''), 10);
-      const pageWordRange = (metadata as any).madani?.page?.[String(pageNum)] as [number, number] | undefined;
-      if (!pageWordRange) continue;
-      // Only include pages that intersect the ruRange
-      if (pageWordRange[1] < rS || pageWordRange[0] > rE) continue;
-
-      ayahEntries.push({
-        surahNum: parseInt(surahKey, 10),
-        pageNum,
-        firstAyah: ayahRange[0],
-        lastAyah: ayahRange[1],
-      });
-    }
-  }
-
-  ayahEntries.sort((a, b) => a.pageNum - b.pageNum || a.surahNum - b.surahNum);
-
-  const total = ayahEntries.length;
-  if (total === 0) {
-    return [];
-  }
+  const entries = collectSUEntries(ruRange, 'Ayah', 'madani', metadata); // Ayahs always use madani detail structure
+  const total = entries.length;
+  if (total === 0) return [];
 
   const base = Math.floor(total / durationDays);
   const remainder = total % durationDays;
+
   const days: DailyTask[] = [];
-  let idx = 0;
+  let currentIndex = 0;
 
   for (let i = 0; i < durationDays; i++) {
-    const count = i < durationDays - remainder ? base : base + 1;
-    const slice = ayahEntries.slice(idx, idx + count);
-    idx += count;
+    const countForDay = i < durationDays - remainder ? base : base + 1;
+    const slice = entries.slice(currentIndex, currentIndex + countForDay);
+    currentIndex += countForDay;
 
-    if (slice.length === 0) {
-      days.push({ shortLabel: '0 Ayahs', details: [], ruLabel });
-      continue;
-    }
-
-    // Compact short label: first-to-last surah + first-to-last ayah bounds
-    const firstEntry = slice[0];
-    const lastEntry  = slice[slice.length - 1];
-    const firstSurahName = SURAH_NAMES[firstEntry.surahNum - 1] ?? `Surah ${firstEntry.surahNum}`;
-    const lastSurahName  = SURAH_NAMES[lastEntry.surahNum - 1]  ?? `Surah ${lastEntry.surahNum}`;
-
-    // Strip the primary Surah name for displayLabel
-    let displayLabel: string;
-    if (firstEntry.surahNum === lastEntry.surahNum) {
-      displayLabel = `Ayahs ${firstEntry.firstAyah}–${lastEntry.lastAyah}`;
-    } else {
-      displayLabel = `${firstSurahName} ${firstEntry.firstAyah} → ${lastSurahName} ${lastEntry.lastAyah}`;
-    }
-
-    // Determine pages
-    const pageNumbers = Array.from(new Set(slice.map(s => s.pageNum))).sort((a,b) => a - b);
-    
-    // Convert to word range roughly
-    const pageMap = (metadata as any).madani.page as MetadataMap;
-    const startWord = pageMap[String(pageNumbers[0])]?.[0] ?? 0;
-    const endWord = pageMap[String(pageNumbers[pageNumbers.length - 1])]?.[1] ?? 0;
-
-    const baseDate = startDateString ? new Date(startDateString) : new Date();
+    const baseDate = startDateString 
+      ? (() => {
+          const [y, m, d] = startDateString.split('-').map(Number);
+          return new Date(y, m - 1, d);
+        })()
+      : new Date();
     baseDate.setDate(baseDate.getDate() + i);
     const fsrsCard = createBaselineFSRSCard('normal');
     fsrsCard.due = baseDate;
 
+    if (slice.length === 0) {
+      days.push({
+        id: crypto.randomUUID(),
+        wordIdRange: [0, 0],
+        surahNumber: 1,
+        pageNumbers: [],
+        displayLabel: `0 Ayahs`,
+        timePreference: 'Any',
+        fsrsCard,
+        reviewLogs: [],
+        note: '',
+        createdAt: new Date().toISOString(),
+        isDeleted: false,
+        details: [],
+        ruType,
+        ruLabel
+      });
+      continue;
+    }
+
+    const displayLabel = displayLabelFromAyahSlice(slice);
+    const first = slice[0];
+    const last = slice[slice.length - 1];
+
     days.push({
       id: crypto.randomUUID(),
-      wordIdRange: [startWord, endWord],
-      surahNumber: firstEntry.surahNum,
-      ayahRange: [firstEntry.firstAyah, lastEntry.lastAyah], // rough estimate
-      pageNumbers,
+      wordIdRange: [first.range[0], last.range[1]],
+      surahNumber: ruType === 'Surah' ? first.surahNumber : first.surahNumber,
+      pageNumbers: Array.from(new Set(slice.map(s => {
+        // Find page number for this range
+        const pageMap = metadata.madani.page as MetadataMap;
+        for (const [pk, pr] of Object.entries(pageMap)) {
+          if (pr[0] <= s.range[1] && pr[1] >= s.range[0]) return parseInt(pk, 10);
+        }
+        return 0;
+      }))).filter(p => p > 0),
       displayLabel,
       timePreference: 'Any',
       fsrsCard,
@@ -467,15 +618,15 @@ function distributeAyahs(
       note: '',
       createdAt: new Date().toISOString(),
       isDeleted: false,
-
-      // UI Details
-      details: slice.map(e => `Ayahs ${e.firstAyah}–${e.lastAyah}`), 
-      ruLabel,
+      details: slice.map(s => s.label),
+      ruType,
+      ruLabel
     });
   }
 
   return days;
 }
+
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Internal helpers
@@ -776,4 +927,254 @@ export function generatePills(
   }
 
   return pills;
+}
+
+/**
+ * The core scheduling engine.
+ * Takes multiple revision units and a shared duration, then distributes all sub-units
+ * sequentially across the timeline.
+ */
+export function distributeSequentially(
+  ruItems: { 
+    id?: string, 
+    ruRange: [number, number], 
+    suType: string, 
+    ruLabel?: string, 
+    ruType: string, 
+    ruValue: string | number 
+  }[],
+  durationDays: number,
+  scriptStyle: ScriptStyle,
+  metadata: QuranMetadata,
+  startDateString?: string
+): (DailyTask & { ruId?: string })[] {
+  if (durationDays < 1) return [];
+
+  // 1. Collect all SUs across all RUs in queue order
+  const allSUs: (SUEntry & { ruId?: string, ruLabel?: string, ruType: string, ruValue: string | number, suType: string })[] = [];
+  for (const item of ruItems) {
+    const entries = collectSUEntries(item.ruRange, item.suType, scriptStyle, metadata);
+    allSUs.push(...entries.map(e => ({ 
+      ...e, 
+      ruId: item.id, 
+      ruLabel: item.ruLabel, 
+      ruType: item.ruType, 
+      ruValue: item.ruValue,
+      suType: item.suType
+    })));
+  }
+
+  const total = allSUs.length;
+  if (total === 0) return [];
+
+  const base = Math.floor(total / durationDays);
+  const remainder = total % durationDays;
+
+  const results: (DailyTask & { ruId?: string })[] = [];
+  let currentIndex = 0;
+
+  for (let i = 0; i < durationDays; i++) {
+    const countForDay = i < durationDays - remainder ? base : base + 1;
+    const slice = allSUs.slice(currentIndex, currentIndex + countForDay);
+    currentIndex += countForDay;
+
+    if (slice.length === 0) {
+      // Create a truly empty day if needed
+      const baseDate = startDateString 
+        ? (() => {
+            const [y, m, d] = startDateString.split('-').map(Number);
+            return new Date(y, m - 1, d);
+          })()
+        : new Date();
+      baseDate.setDate(baseDate.getDate() + i);
+      const fsrsCard = createBaselineFSRSCard('normal');
+      fsrsCard.due = baseDate;
+
+      results.push({
+        id: crypto.randomUUID(),
+        wordIdRange: [0, 0],
+        surahNumber: 1,
+        pageNumbers: [],
+        displayLabel: '0 SUs',
+        timePreference: 'Any',
+        fsrsCard,
+        reviewLogs: [],
+        note: '',
+        createdAt: new Date().toISOString(),
+        isDeleted: false,
+        details: [],
+      });
+      continue;
+    }
+
+    // Group the day's slice by RU to create cohesive DailyTasks
+    let currentGroup: typeof slice = [];
+    const finalizeGroup = (group: typeof slice, dayIdx: number) => {
+      if (group.length === 0) return;
+      
+      const first = group[0];
+      const last = group[group.length - 1];
+      const suType = first.suType;
+
+      // Labeling logic
+      let displayLabel = '';
+      if (group.length === 1) {
+        if (suType === 'Surah') displayLabel = SURAH_NAMES[first.surahNumber - 1] ?? first.label;
+        else displayLabel = first.label;
+      } else {
+        if (suType === 'Surah') {
+           displayLabel = `${SURAH_NAMES[first.surahNumber - 1]} – ${SURAH_NAMES[last.surahNumber - 1]}`;
+        } else if (suType === 'Ayah') {
+           // Range of ayahs
+           displayLabel = `${displayLabelFromAyahSlice(group)}`;
+        } else {
+           displayLabel = `${suType}s ${first.key}–${last.key}`;
+        }
+      }
+
+      const totalRange: [number, number] = [group[0].range[0], group[group.length - 1].range[1]];
+
+      // Page numbers for this specific RU group on this day
+      const pageNumbers: number[] = [];
+      const { madani, indopak } = metadata;
+      const pageMap = (scriptStyle === 'madani' ? madani.page : indopak.page) as MetadataMap;
+      for (const [pk, pr] of Object.entries(pageMap)) {
+        if (pr[0] <= totalRange[1] && pr[1] >= totalRange[0]) pageNumbers.push(+pk);
+      }
+
+      const baseDate = startDateString 
+        ? (() => {
+            const [y, m, d] = startDateString.split('-').map(Number);
+            return new Date(y, m - 1, d);
+          })()
+        : new Date();
+      baseDate.setDate(baseDate.getDate() + dayIdx);
+      const fsrsCard = createBaselineFSRSCard('normal');
+      fsrsCard.due = baseDate;
+
+      results.push({
+        id: crypto.randomUUID(),
+        ruId: first.ruId,
+        ruType: first.ruType,
+        wordIdRange: totalRange,
+        surahNumber: first.ruType === 'Surah' ? Number(first.ruValue) : first.surahNumber,
+        pageNumbers,
+        displayLabel,
+        timePreference: 'Any',
+        fsrsCard,
+        reviewLogs: [],
+        note: '',
+        createdAt: new Date().toISOString(),
+        isDeleted: false,
+        details: group.map(s => s.label),
+        ruLabel: first.ruLabel,
+      });
+    };
+
+    for (const item of slice) {
+      if (currentGroup.length > 0 && 
+          (item.ruId !== currentGroup[0].ruId || item.suType !== currentGroup[0].suType)) {
+        finalizeGroup(currentGroup, i);
+        currentGroup = [];
+      }
+      currentGroup.push(item);
+    }
+    finalizeGroup(currentGroup, i);
+  }
+
+  return results;
+}
+
+/** Helper for beautiful Ayah labels in sequential scheduling */
+function displayLabelFromAyahSlice(group: any[]): string {
+  const first = group[0];
+  const last = group[group.length - 1];
+  
+  // Extract ayah numbers from labels like "Ayah 5"
+  const getAyahNum = (label: string) => {
+    const match = label.match(/Ayah (\d+)/);
+    return match ? parseInt(match[1], 10) : 0;
+  };
+
+  const fA = getAyahNum(first.label);
+  const lA = getAyahNum(last.label);
+
+  if (first.surahNumber === last.surahNumber) {
+    if (fA === lA) return `Ayah ${fA}`;
+    return `Ayahs ${fA}–${lA}`;
+  } else {
+    const fName = SURAH_NAMES[first.surahNumber - 1];
+    const lName = SURAH_NAMES[last.surahNumber - 1];
+    return `${fName} ${fA} → ${lName} ${lA}`;
+  }
+}
+
+export function getRuLabel(type: string, value: string | number): string {
+  if (type === 'Surah') {
+    return `${value}. ${SURAH_NAMES[Number(value) - 1] || ''}`;
+  }
+  return `${type} ${value}`;
+}
+
+/**
+ * Generates future projected tasks for a Revision Unit based on its FSRS due date
+ * and its original planned duration.
+ */
+export function generateProjectedSUs(
+  ru: RevisionUnitData,
+  metadata: QuranMetadata,
+  scriptStyle: ScriptStyle
+): ProjectedTask[] {
+  let range = ru.ruRange;
+  let duration = ru.routineDurationDays;
+
+  // Fallback for legacy data created before schema update
+  if (!range && ru.scheduleList && ru.scheduleList.length > 0) {
+    const validTasks = ru.scheduleList.filter((su: ScheduleUnit) => su.wordIdRange && su.wordIdRange[1] > 0);
+    if (validTasks.length > 0) {
+       const sorted = [...validTasks].sort((a, b) => a.wordIdRange[0] - b.wordIdRange[0]);
+       range = [sorted[0].wordIdRange[0], sorted[sorted.length - 1].wordIdRange[1]];
+    }
+  }
+  if ((!duration || duration < 1) && ru.scheduleList && ru.scheduleList.length > 0) {
+    duration = new Set(ru.scheduleList.map((su: ScheduleUnit) => new Date(su.fsrsCard.due).toDateString())).size;
+  }
+
+  if (!range || !duration || duration < 1) return [];
+
+  const startDate = new Date(ru.fsrsCard.due);
+  const ruLabel = getRuLabel(ru.unitType, ru.unitValue);
+
+  // Run the distribution logic for just this RU
+  const items = [{
+    id: ru.id,
+    ruRange: range,
+    suType: ru.scheduledUnitType,
+    ruLabel: ruLabel,
+    ruType: ru.unitType,
+    ruValue: ru.unitValue
+  }];
+
+  const startDateStr = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-${String(startDate.getDate()).padStart(2, '0')}`;
+  const tasks = distributeSequentially(
+    items, 
+    duration, 
+    scriptStyle, 
+    metadata, 
+    startDateStr
+  );
+
+  return tasks.map(t => {
+    const d = new Date(t.fsrsCard.due);
+    const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    
+    return {
+      dateKey,
+      ruLabel: ruLabel,
+      displayLabel: t.displayLabel,
+      ruId: ru.id,
+      surahNumber: t.surahNumber,
+      ruType: ru.unitType
+    };
+  });
 }

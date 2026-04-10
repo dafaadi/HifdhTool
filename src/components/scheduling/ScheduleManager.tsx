@@ -118,6 +118,18 @@ export function ScheduleManager() {
             const isEditing = editingId === schedule.id;
             const isDeleting = deletingId === schedule.id;
 
+            // Calculate overall next revision date for the schedule
+            let nextDueDate: string | null = null;
+            schedule.revisionList.forEach(ru => {
+              if (ru.isDeleted) return;
+              if (ru.scheduleList.length > 0) {
+                 const d = ru.scheduleList[0].fsrsCard.due;
+                 if (!nextDueDate || new Date(d) < new Date(nextDueDate)) {
+                   nextDueDate = d;
+                 }
+              }
+            });
+
             return (
               <div key={schedule.id} className="sm-schedule-card">
                 {/* Level 1: Schedule Header */}
@@ -135,7 +147,10 @@ export function ScheduleManager() {
                         onKeyDown={e => e.key === 'Enter' && handleTitleSubmit(schedule.id)}
                       />
                     ) : (
-                      <span className="sm-card-title">{schedule.title}</span>
+                      <div className="sm-card-title-group">
+                        <span className="sm-card-title">{schedule.title}</span>
+                        <span className="sm-card-meta">Start Date: {formatDate(schedule.startDate)}</span>
+                      </div>
                     )}
                   </div>
 
@@ -166,6 +181,12 @@ export function ScheduleManager() {
                 {/* Level 1: Expandable Content (RUs) */}
                 {isExpanded && (
                   <div className="sm-card-body">
+                    <div className="sm-global-summary-row">
+                      <div className="sm-global-next-due-col">
+                        <span className="sm-summary-label">Next Revision Date</span>
+                      </div>
+                    </div>
+
                     {schedule.revisionList.map(ru => {
                       const ruIsExpanded = expandedRUs[ru.id];
                       return (
@@ -177,7 +198,6 @@ export function ScheduleManager() {
                             </div>
                             
                             <div className="sm-ru-meta-col">
-                              <span className="sm-label-fixed">Next Revision Date</span>
                               <span className="sm-date">{formatDate(ru.fsrsCard.due)}</span>
                               <ChevronDown size={14} className={`sm-chevron ${ruIsExpanded ? 'sm-chevron--open' : ''}`} />
                             </div>
