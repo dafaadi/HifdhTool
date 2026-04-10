@@ -156,6 +156,25 @@ export function SchedulingDashboard({ scriptStyle }: Props) {
               details: [su.displayLabel] // Reconstruct minimal details
             };
             taskMap[dateKey].push(dailyTask);
+
+            // Shell pill tracking for completed tasks
+            if (su.reviewLogs && su.reviewLogs.length > 0) {
+              const lastLog = su.reviewLogs[su.reviewLogs.length - 1];
+              // the review date inside ts-fsrs ReviewLog might be string or Date, parse it
+              const lrDate = new Date(lastLog.review);
+              const lrDateKey = `${lrDate.getFullYear()}-${String(lrDate.getMonth() + 1).padStart(2, '0')}-${String(lrDate.getDate()).padStart(2, '0')}`;
+              
+              if (lrDateKey !== dateKey) {
+                if (!taskMap[lrDateKey]) taskMap[lrDateKey] = [];
+                // Only push if we haven't already pushed it (rare, but just in case)
+                if (!taskMap[lrDateKey].some(t => t.id === dailyTask.id)) {
+                  taskMap[lrDateKey].push({
+                    ...dailyTask,
+                    isCompleted: true
+                  });
+                }
+              }
+            }
           });
         });
       });

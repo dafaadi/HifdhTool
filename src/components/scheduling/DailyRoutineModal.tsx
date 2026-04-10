@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight, Eye, Lightbulb, MessageSquare, RotateCw, AlertCircle, CheckCircle2, CheckCheck } from 'lucide-react';
 import { type DailyTask } from '../../utils/memorizationEngine';
 import { Rating, type Card } from 'ts-fsrs';
@@ -15,8 +15,38 @@ interface DailyRoutineModalProps {
 export function DailyRoutineModal({ isOpen, onClose, tasks }: DailyRoutineModalProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showText, setShowText] = useState(false);
+  const [isComplete, setIsComplete] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setCurrentIndex(0);
+      setShowText(false);
+      setIsComplete(false);
+    }
+  }, [isOpen]);
 
   if (!isOpen || tasks.length === 0) return null;
+
+  if (isComplete) {
+    return (
+      <div className="drm-overlay">
+        <div className="drm-content" style={{ alignItems: 'center', justifyContent: 'center', padding: '40px', minHeight: '300px' }}>
+          <CheckCheck size={48} color="#4ade80" style={{ marginBottom: '16px' }} />
+          <h2 style={{ color: '#4ade80', margin: '0 0 10px 0', fontFamily: "'Playfair Display', serif", fontSize: '1.8rem' }}>Routine Completed!</h2>
+          <p style={{ color: '#a1a1aa', textAlign: 'center', margin: '0 0 24px 0', lineHeight: 1.5 }}>
+            Excellent work. You've completed all scheduled portions for this session.
+          </p>
+          <button 
+            className="pm-btn pm-btn--primary" 
+            style={{ padding: '12px 32px', fontSize: '1rem' }} 
+            onClick={onClose}
+          >
+            Close Session
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const currentTask = tasks[currentIndex];
   
@@ -47,9 +77,28 @@ export function DailyRoutineModal({ isOpen, onClose, tasks }: DailyRoutineModalP
     );
 
     localStorage.setItem('schedules', JSON.stringify(updatedSchedules));
+
+    // Track recently graded for animation in the calendar
+    try {
+      const recentlyGradedStr = localStorage.getItem('recentlyGradedTasks') || '[]';
+      const recentlyGraded: {id: string, timestamp: number}[] = JSON.parse(recentlyGradedStr);
+      recentlyGraded.push({ id: currentTask.id, timestamp: Date.now() });
+      // Keep only recent ones (e.g., graded within last 60 seconds)
+      const validRecentlyGraded = recentlyGraded.filter(g => Date.now() - g.timestamp < 60000);
+      localStorage.setItem('recentlyGradedTasks', JSON.stringify(validRecentlyGraded));
+    } catch { /* ignore */ }
+
     window.dispatchEvent(new Event('hifdhSchedulesUpdated'));
-    // Auto-advance after a short delay or stay?
-    // Let's stay so they see the result, but provide an "advance" button or just let them click next.
+    
+    // Auto-advance after a short delay for visual feedback
+    setTimeout(() => {
+      if (currentIndex < tasks.length - 1) {
+        setCurrentIndex(c => c + 1);
+        setShowText(false);
+      } else {
+        setIsComplete(true);
+      }
+    }, 150);
   };
 
   const nextTask = () => {
@@ -103,7 +152,12 @@ export function DailyRoutineModal({ isOpen, onClose, tasks }: DailyRoutineModalP
         </div>
 
         <div className="drm-title-row">
-          <h2 className="drm-task-title">Recite {currentTask.ruLabel}, {currentTask.displayLabel}</h2>
+          <h2 className="drm-task-title">
+            Recite {currentTask.ruLabel}
+            {(!currentTask.ruLabel.includes(currentTask.displayLabel) && currentTask.ruType !== currentTask.suType) && 
+              `, ${currentTask.displayLabel}`
+            }
+          </h2>
           <div className="drm-progress-container">
              <div className="drm-progress-bar" style={{ width: `${((currentIndex + 1) / tasks.length) * 100}%` }}></div>
           </div>

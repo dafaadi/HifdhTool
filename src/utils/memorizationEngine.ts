@@ -214,6 +214,7 @@ export type DailyTask = ScheduleUnit & {
   ruId?: string;
   ruType?: string;
   ruLabel?: string;
+  isCompleted?: boolean;
 };
 
 export interface ProjectedTask {
@@ -347,31 +348,25 @@ export function getValidSUs(
   metadata: QuranMetadata
 ): string[] {
   const hierarchy = scriptStyle === 'madani' ? MADANI_SU_HIERARCHY : INDOPAK_SU_HIERARCHY;
-  const ruIdx = hierarchy.indexOf(ruType as any);
   
-  // 1. Initial candidates: units that are naturally below ruType in the list
-  let candidates: string[] = ruIdx === -1 ? [...hierarchy] : [...hierarchy.slice(ruIdx + 1)];
-  
-  // 2. Special Expansion for 'Surah': Large surahs (Baqarah, etc.) are bigger 
-  // than Rubs or even Hizbs. We allow these as SUs if they actually fit.
-  if (ruType === 'Surah') {
-    if (scriptStyle === 'madani') {
-      candidates = ['Juz', 'Hizb', "Rub'", ...candidates];
-    } else {
-      candidates = ['Para', 'Ruku', ...candidates];
-    }
-  }
+  // 1. Candidates: All possible units. 
+  // We no longer strictly follow the hierarchy list for 'Surah' RUs 
+  // because Surahs can be larger than Rubs, Hizbs, or even Juz.
+  let candidates: string[] = [...hierarchy];
   
   // Deduplicate
   const uniqueCandidates = Array.from(new Set(candidates));
 
-  // 3. Filter to only include SUs that have >1 sub-unit in the RU's range
+  // 2. Filter to only include SUs that are strictly "within" the RU and smaller than it,
+  // OR the exact same unit type as the RU (to allow 1-day whole-unit revision).
   return uniqueCandidates.filter(suType => {
+    // If it's the SAME type as the RU, we always allow it
+    if (suType === ruType) return true;
+
     if (suType === 'Ayah') return true; 
     const count = countSubUnits(ruRange, suType, scriptStyle, metadata);
-    // Must have at least 2 sub-units in range to make scheduling meaningful,
-    // unless the RU is itself a Surah (then 1 Page/Hizb etc. might be the content)
-    if (ruType === 'Surah') return count >= 1;
+    
+    // For other units, we require at least 2 to ensure it's a valid "split".
     return count >= 2;
   });
 }
@@ -1072,14 +1067,8 @@ export function distributeSequentially(
     };
 
     for (const item of slice) {
-      if (currentGroup.length > 0 && 
-          (item.ruId !== currentGroup[0].ruId || item.suType !== currentGroup[0].suType)) {
-        finalizeGroup(currentGroup, i);
-        currentGroup = [];
-      }
-      currentGroup.push(item);
+      finalizeGroup([item], i);
     }
-    finalizeGroup(currentGroup, i);
   }
 
   return results;

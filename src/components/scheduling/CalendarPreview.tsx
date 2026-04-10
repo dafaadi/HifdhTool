@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 import { type DailyTask, SURAH_NAMES, type ScriptStyle, generateProjectedSUs, type ProjectedTask } from '../../utils/memorizationEngine';
 import metadata from '../../data/quran-metadata.json';
 import type { Schedule } from '../../types';
@@ -82,16 +82,62 @@ export function CalendarPreview({ taskMap, scriptStyle }: Props) {
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
 
+  // Visibility States
+  const [showProjections, setShowProjections] = useState(true);
+  const [hiddenRuIds, setHiddenRuIds] = useState<Set<string>>(new Set());
+
+  const loadVisibility = () => {
+    try {
+      const stored = localStorage.getItem('hifdhVisibility');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        setShowProjections(parsed.showProjections ?? true);
+        setHiddenRuIds(new Set(parsed.hiddenRuIds || []));
+      }
+    } catch { /* ignore */ }
+  };
+
+  useEffect(() => {
+    loadVisibility();
+    window.addEventListener('hifdhVisibilityUpdated', loadVisibility);
+    return () => window.removeEventListener('hifdhVisibilityUpdated', loadVisibility);
+  }, []);
+
+  const saveVisibility = (show: boolean, hidden: Set<string>) => {
+    localStorage.setItem('hifdhVisibility', JSON.stringify({
+      showProjections: show,
+      hiddenRuIds: Array.from(hidden)
+    }));
+    window.dispatchEvent(new Event('hifdhVisibilityUpdated'));
+  };
+
   // Modal State
   const [modalDate, setModalDate] = useState<string | null>(null);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [activeNoteText, setActiveNoteText] = useState('');
+  
+  // Highlighting State
+  const [recentlyGraded, setRecentlyGraded] = useState<{id: string, timestamp: number}[]>([]);
 
   useEffect(() => {
     try {
       const stored = localStorage.getItem('calendarNotes');
       if (stored) setNotes(JSON.parse(stored));
     } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    const loadRecentlyGraded = () => {
+      try {
+        const stored = localStorage.getItem('recentlyGradedTasks');
+        if (stored) {
+          setRecentlyGraded(JSON.parse(stored));
+        }
+      } catch { /* ignore */ }
+    };
+    loadRecentlyGraded();
+    window.addEventListener('hifdhSchedulesUpdated', loadRecentlyGraded);
+    return () => window.removeEventListener('hifdhSchedulesUpdated', loadRecentlyGraded);
   }, []);
 
   const saveNotes = (dateKey: string, text: string) => {
@@ -126,7 +172,7 @@ export function CalendarPreview({ taskMap, scriptStyle }: Props) {
     schedules.forEach(s => {
       if (s.isDeleted) return;
       s.revisionList.forEach(ru => {
-        if (ru.isDeleted) return;
+        if (ru.isDeleted || hiddenRuIds.has(ru.id)) return;
         const pts = generateProjectedSUs(ru, metadata as any, scriptStyle);
         pts.forEach(pt => {
           if (!projections[pt.dateKey]) projections[pt.dateKey] = [];
@@ -159,8 +205,8 @@ export function CalendarPreview({ taskMap, scriptStyle }: Props) {
          currentMonth === today.getMonth() && 
          d === today.getDate();
          
-       const dayTasks = taskMap[dateKey] || [];
-       const dayProjections = projections[dateKey] || [];
+       const dayTasks = (taskMap[dateKey] || []).filter(t => !hiddenRuIds.has(t.ruId || ''));
+       const dayProjections = showProjections ? (projections[dateKey] || []) : [];
        let type: DayTaskType = isToday ? 'today' : ((dayTasks.length > 0 || dayProjections.length > 0) ? 'hasTasks' : 'normal');
 
        cells.push({ dateKey, day: d, type, dailyTasks: dayTasks, projectedTasks: dayProjections });
@@ -186,11 +232,21 @@ export function CalendarPreview({ taskMap, scriptStyle }: Props) {
             <p>{monthName} {currentYear} &bull; Consistent Devotion</p>
           </div>
           <div className="sd-cal-nav">
-            <button className="sd-cal-nav-btn" title="Previous month" onClick={prevMonth}>
-              <ChevronLeft size={16} />
-            </button>
-            <button className="sd-cal-nav-btn" title="Next month" onClick={nextMonth}>
-              <ChevronRight size={16} />
+            <div className="sd-cal-nav-buttons">
+              <button className="sd-cal-nav-btn" title="Previous month" onClick={prevMonth}>
+                <ChevronLeft size={16} />
+              </button>
+              <button className="sd-cal-nav-btn" title="Next month" onClick={nextMonth}>
+                <ChevronRight size={16} />
+              </button>
+            </div>
+
+            <button 
+              className={`sd-visibility-toggle ${!showProjections ? 'sd-visibility-toggle--off' : ''}`}
+              onClick={() => saveVisibility(!showProjections, hiddenRuIds)}
+            >
+              {showProjections ? <Eye size={16} /> : <EyeOff size={16} />}
+              <span>Project next routine</span>
             </button>
           </div>
         </div>
@@ -214,18 +270,22 @@ export function CalendarPreview({ taskMap, scriptStyle }: Props) {
                      <div className="sd-cal-task-list">
                        {c.dailyTasks.map((t, idx) => {
                          const theme = getTaskStyles(t.ruId);
+                         const isCompleted = t.isCompleted;
+                         const isHighlighted = !isCompleted && recentlyGraded.some(g => g.id === t.id);
+
                          return (
                            <div 
                              key={idx} 
-                             className="sd-cal-task-label" 
-                             style={{
+                             className={`sd-cal-task-label ${isCompleted ? 'sd-cal-task-label--completed' : ''} ${isHighlighted ? 'sd-cal-task-label--highlight' : ''}`} 
+                             style={!isCompleted ? {
                                background: theme.bg,
                                border: `1px solid ${theme.border}`,
                                color: theme.tx
-                             }}
+                             } : undefined}
                              title={`${SURAH_NAMES[t.surahNumber - 1]}: ${t.displayLabel}`}
                            >
                              <TaskLabel task={t} />
+                             {isCompleted && <CheckCircle2 size={12} style={{ display: 'inline', marginLeft: '4px', verticalAlign: 'middle', marginTop: '-2px' }}/>}
                            </div>
                          );
                        })}

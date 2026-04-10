@@ -6,7 +6,9 @@ import {
   Filter, 
   Check, 
   X, 
-  Clock 
+  Clock,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import type { Schedule, RevisionUnitData, ScheduleUnit } from '../../types';
 import { SURAH_NAMES } from '../../utils/memorizationEngine';
@@ -41,6 +43,38 @@ export function ScheduleManager() {
   const [editTitle, setEditTitle] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  // Visibility States
+  const [showProjections, setShowProjections] = useState(true);
+  const [hiddenRuIds, setHiddenRuIds] = useState<Set<string>>(new Set());
+
+  const loadVisibility = () => {
+    try {
+      const stored = localStorage.getItem('hifdhVisibility');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        setShowProjections(parsed.showProjections ?? true);
+        setHiddenRuIds(new Set(parsed.hiddenRuIds || []));
+      }
+    } catch { /* ignore */ }
+  };
+
+  const saveVisibility = (show: boolean, hidden: Set<string>) => {
+    localStorage.setItem('hifdhVisibility', JSON.stringify({
+      showProjections: show,
+      hiddenRuIds: Array.from(hidden)
+    }));
+    window.dispatchEvent(new Event('hifdhVisibilityUpdated'));
+  };
+
+  const toggleRuVisibility = (ruId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newHidden = new Set(hiddenRuIds);
+    if (newHidden.has(ruId)) newHidden.delete(ruId);
+    else newHidden.add(ruId);
+    setHiddenRuIds(newHidden);
+    saveVisibility(showProjections, newHidden);
+  };
+
   const loadSchedules = () => {
     try {
       const raw = localStorage.getItem('schedules');
@@ -57,8 +91,13 @@ export function ScheduleManager() {
 
   useEffect(() => {
     loadSchedules();
+    loadVisibility();
     window.addEventListener('hifdhSchedulesUpdated', loadSchedules);
-    return () => window.removeEventListener('hifdhSchedulesUpdated', loadSchedules);
+    window.addEventListener('hifdhVisibilityUpdated', loadVisibility);
+    return () => {
+      window.removeEventListener('hifdhSchedulesUpdated', loadSchedules);
+      window.removeEventListener('hifdhVisibilityUpdated', loadVisibility);
+    };
   }, []);
 
   const saveSchedules = (updated: Schedule[]) => {
@@ -198,6 +237,13 @@ export function ScheduleManager() {
                             </div>
                             
                             <div className="sm-ru-meta-col">
+                              <button 
+                                className={`sm-ru-visibility-btn ${hiddenRuIds.has(ru.id) ? 'sm-ru-visibility-btn--off' : ''}`}
+                                onClick={(e) => toggleRuVisibility(ru.id, e)}
+                                title={hiddenRuIds.has(ru.id) ? "Show this unit" : "Hide this unit"}
+                              >
+                                {hiddenRuIds.has(ru.id) ? <EyeOff size={14} /> : <Eye size={14} />}
+                              </button>
                               <span className="sm-date">{formatDate(ru.fsrsCard.due)}</span>
                               <ChevronDown size={14} className={`sm-chevron ${ruIsExpanded ? 'sm-chevron--open' : ''}`} />
                             </div>

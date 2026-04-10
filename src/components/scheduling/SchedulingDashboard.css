@@ -439,7 +439,17 @@ html:not(.dark-mode) .sd-date-input::-webkit-calendar-picker-indicator {
   margin:    0;
 }
 
-.sd-cal-nav { display: flex; gap: 6px; }
+.sd-cal-nav { 
+  display: flex; 
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px; 
+}
+
+.sd-cal-nav-buttons {
+  display: flex;
+  gap: 6px;
+}
 
 .sd-cal-nav-btn {
   width:           34px;
@@ -539,6 +549,25 @@ html:not(.dark-mode) .sd-date-input::-webkit-calendar-picker-indicator {
   max-width: 100%;
   box-sizing: border-box;
   word-break: break-word;
+  transition: all 0.3s ease;
+}
+
+@keyframes highlight-flash {
+  0% { transform: scale(1.05); filter: brightness(1.5); box-shadow: 0 0 16px rgba(250, 204, 21, 0.4); }
+  50% { transform: scale(1.02); filter: brightness(1.2); box-shadow: 0 0 8px rgba(250, 204, 21, 0.2); }
+  100% { transform: scale(1); filter: brightness(1); box-shadow: none; }
+}
+
+.sd-cal-task-label--highlight {
+  animation: highlight-flash 2.5s ease-out forwards;
+}
+
+.sd-cal-task-label--completed {
+  opacity: 0.45;
+  background: rgba(255, 255, 255, 0.03) !important;
+  border-color: #3f3f46 !important;
+  color: #a1a1aa !important;
+  text-decoration: line-through;
 }
 
 .sd-cal-task-label--note {
@@ -863,6 +892,43 @@ html:not(.dark-mode) .sd-textarea { background: #f9fafb; border-color: #d1d5db; 
   grid-template-columns: 1fr 1fr;
   gap:                   1.25rem;
   margin-top:            -0.5rem; /* Tighter spacing below schedulers */
+}
+
+.sd-cal-section {
+  background:    transparent;
+  border-radius: 12px;
+  display:       flex;
+  flex-direction: column;
+  gap:           1rem;
+}
+
+.sd-visibility-toggle {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid #2e2e2e;
+  border-radius: 8px;
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #a1a1aa;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sd-visibility-toggle:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: #444;
+  color: #f4f4f5;
+}
+
+.sd-visibility-toggle--off {
+  opacity: 0.6;
+}
+
+.sd-visibility-toggle--off svg {
+  color: #ef4444;
 }
 
 .sd-action-card {
