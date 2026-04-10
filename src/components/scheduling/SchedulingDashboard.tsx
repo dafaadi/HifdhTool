@@ -43,7 +43,7 @@ function DailyActionCards({
       groups[key].push(t);
     });
 
-    const labels = Object.entries(groups).map(([ruLabel, ruTasks]) => {
+    const labels = Object.entries(groups).map(([_ruLabel, ruTasks]) => {
       const sName = SURAH_NAMES[ruTasks[0].surahNumber - 1] || "";
       let finalLabel = "";
 
@@ -164,15 +164,13 @@ export function SchedulingDashboard({ scriptStyle }: Props) {
               const lrDate = new Date(lastLog.review);
               const lrDateKey = `${lrDate.getFullYear()}-${String(lrDate.getMonth() + 1).padStart(2, '0')}-${String(lrDate.getDate()).padStart(2, '0')}`;
               
-              if (lrDateKey !== dateKey) {
-                if (!taskMap[lrDateKey]) taskMap[lrDateKey] = [];
-                // Only push if we haven't already pushed it (rare, but just in case)
-                if (!taskMap[lrDateKey].some(t => t.id === dailyTask.id)) {
-                  taskMap[lrDateKey].push({
-                    ...dailyTask,
-                    isCompleted: true
-                  });
-                }
+              if (!taskMap[lrDateKey]) taskMap[lrDateKey] = [];
+              // Only push if we haven't already pushed it
+              if (!taskMap[lrDateKey].some(t => t.id === dailyTask.id && t.isCompleted)) {
+                taskMap[lrDateKey].push({
+                  ...dailyTask,
+                  isCompleted: true
+                });
               }
             }
           });

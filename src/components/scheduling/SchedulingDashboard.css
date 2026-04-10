@@ -563,11 +563,12 @@ html:not(.dark-mode) .sd-date-input::-webkit-calendar-picker-indicator {
 }
 
 .sd-cal-task-label--completed {
-  opacity: 0.45;
-  background: rgba(255, 255, 255, 0.03) !important;
-  border-color: #3f3f46 !important;
-  color: #a1a1aa !important;
+  opacity: 0.65;
+  background: rgba(45, 45, 50, 0.4) !important;
+  border: 1px solid #3f3f46 !important;
+  color: #d1d5db !important;
   text-decoration: line-through;
+  filter: grayscale(0.8);
 }
 
 .sd-cal-task-label--note {

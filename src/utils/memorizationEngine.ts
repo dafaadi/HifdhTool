@@ -597,7 +597,7 @@ export function distributeAyahs(
     days.push({
       id: crypto.randomUUID(),
       wordIdRange: [first.range[0], last.range[1]],
-      surahNumber: ruType === 'Surah' ? first.surahNumber : first.surahNumber,
+      surahNumber: first.surahNumber,
       pageNumbers: Array.from(new Set(slice.map(s => {
         // Find page number for this range
         const pageMap = metadata.madani.page as MetadataMap;
@@ -1002,30 +1002,17 @@ export function distributeSequentially(
       continue;
     }
 
-    // Group the day's slice by RU to create cohesive DailyTasks
-    let currentGroup: typeof slice = [];
+    // Finalize each sub-unit as its own standalone DailyTask
     const finalizeGroup = (group: typeof slice, dayIdx: number) => {
       if (group.length === 0) return;
       
       const first = group[0];
-      const last = group[group.length - 1];
       const suType = first.suType;
 
       // Labeling logic
       let displayLabel = '';
-      if (group.length === 1) {
-        if (suType === 'Surah') displayLabel = SURAH_NAMES[first.surahNumber - 1] ?? first.label;
-        else displayLabel = first.label;
-      } else {
-        if (suType === 'Surah') {
-           displayLabel = `${SURAH_NAMES[first.surahNumber - 1]} – ${SURAH_NAMES[last.surahNumber - 1]}`;
-        } else if (suType === 'Ayah') {
-           // Range of ayahs
-           displayLabel = `${displayLabelFromAyahSlice(group)}`;
-        } else {
-           displayLabel = `${suType}s ${first.key}–${last.key}`;
-        }
-      }
+      if (suType === 'Surah') displayLabel = SURAH_NAMES[first.surahNumber - 1] ?? first.label;
+      else displayLabel = first.label;
 
       const totalRange: [number, number] = [group[0].range[0], group[group.length - 1].range[1]];
 
