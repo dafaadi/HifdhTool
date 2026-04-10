@@ -160,7 +160,7 @@ function RuListItem({
       </div>
       <div className="sd-ru-task-group">
         {(() => {
-          const { main, sub } = calculateDailyLoad(itemSUs, totalQueueSUs, durationDays === '' ? 1 : durationDays, item.suType);
+          const { main, sub } = calculateDailyLoad(itemSUs, totalQueueSUs, durationDays, item.suType);
           return (
             <>
               <span className="sd-ru-task-main">{main}</span>
@@ -327,8 +327,7 @@ export function RevisionScheduler({ scriptStyle, onGenerateTasks, onClearTasks }
     setHasGenerated(true);
     
     const taskMap: Record<string, DailyTask[]> = {};
-    const baseDate = new Date(startDateString);
-    
+
     const ruItems = revisionQueue.map(item => ({
       id: item.id,
       ruRange: item.range,

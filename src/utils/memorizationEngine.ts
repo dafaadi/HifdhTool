@@ -214,6 +214,7 @@ export type DailyTask = ScheduleUnit & {
   ruId?: string;
   ruType?: string;
   ruLabel?: string;
+  suType?: string;
   isCompleted?: boolean;
 };
 
@@ -1050,6 +1051,7 @@ export function distributeSequentially(
         isDeleted: false,
         details: group.map(s => s.label),
         ruLabel: first.ruLabel,
+        suType: first.suType,
       });
     };
 

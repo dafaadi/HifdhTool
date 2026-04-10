@@ -153,8 +153,8 @@ export function DailyRoutineModal({ isOpen, onClose, tasks }: DailyRoutineModalP
 
         <div className="drm-title-row">
           <h2 className="drm-task-title">
-            Recite {currentTask.ruLabel}
-            {(!currentTask.ruLabel.includes(currentTask.displayLabel) && currentTask.ruType !== currentTask.suType) && 
+            Recite {currentTask?.ruLabel}
+            {(currentTask?.ruLabel && currentTask?.displayLabel && !currentTask.ruLabel.includes(currentTask.displayLabel) && currentTask.ruType !== (currentTask as any).suType) && 
               `, ${currentTask.displayLabel}`
             }
           </h2>

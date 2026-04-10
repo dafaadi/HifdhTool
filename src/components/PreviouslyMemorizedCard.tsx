@@ -7,7 +7,6 @@ import {
   SURAH_NAMES,
   type GraduationSettings,
   type ScriptStyle,
-  type ViewMode,
   type QuranMetadata,
 } from '../utils/memorizationEngine';
 import { SearchableDropdown, type DropdownOption } from './ui/SearchableDropdown';

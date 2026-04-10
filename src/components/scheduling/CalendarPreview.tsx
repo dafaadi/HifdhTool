@@ -60,8 +60,7 @@ function getDaysInMonth(year: number, month: number) {
 function TaskLabel({ task }: { task: DailyTask | ProjectedTask }) {
   const surahName = SURAH_NAMES[task.surahNumber - 1];
   const isLargeUnit = ['Juz', 'Para', 'Manzil'].includes(task.ruType || '');
-  const isSurahUnit = task.ruType === 'Surah';
-  
+
   // If the label identifies itself (e.g. "Al-Baqarah" or "Juz 1"), 
   // we don't need a Surah prefix based on the starting word.
   const isSelfIdentified = task.displayLabel.includes(surahName || '___') || isLargeUnit;

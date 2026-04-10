@@ -4,13 +4,10 @@ import {
   Trash2, 
   ChevronDown, 
   Filter, 
-  Check, 
-  X, 
-  Clock,
   Eye,
   EyeOff
 } from 'lucide-react';
-import type { Schedule, RevisionUnitData, ScheduleUnit } from '../../types';
+import type { Schedule } from '../../types';
 import { SURAH_NAMES } from '../../utils/memorizationEngine';
 import './ScheduleManager.css';
 
@@ -164,7 +161,7 @@ export function ScheduleManager() {
               if (ru.scheduleList.length > 0) {
                  const d = ru.scheduleList[0].fsrsCard.due;
                  if (!nextDueDate || new Date(d) < new Date(nextDueDate)) {
-                   nextDueDate = d;
+                   nextDueDate = new Date(d).toISOString();
                  }
               }
             });

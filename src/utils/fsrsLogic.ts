@@ -1,5 +1,5 @@
-import { fsrs, type Card, State, type FSRSParameters, createEmptyCard, Rating, type ReviewLog } from 'ts-fsrs';
-import type { Schedule, ScheduleUnit, RevisionUnitData } from '../types';
+import { fsrs, type Card, State, type FSRSParameters, createEmptyCard, Rating } from 'ts-fsrs';
+import type { Schedule, ScheduleUnit } from '../types';
 
 // Custom parameters for FSRS for Quran Hifdh
 export const quranFsrsParams: Partial<FSRSParameters> = {
