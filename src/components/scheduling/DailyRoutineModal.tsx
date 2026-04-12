@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, ChevronLeft, ChevronRight, Eye, Lightbulb, MessageSquare, RotateCw, AlertCircle, CheckCircle2, CheckCheck } from 'lucide-react';
+import { X, Eye, Lightbulb, MessageSquare, RotateCw, AlertCircle, CheckCircle2, CheckCheck } from 'lucide-react';
 import { type DailyTask, type QuranMetadata, type ScriptStyle } from '../../utils/memorizationEngine.v2';
 import { Rating, type Card } from 'ts-fsrs';
 import { quranFsrs, handleGradeScheduleUnit } from '../../utils/fsrsLogic';

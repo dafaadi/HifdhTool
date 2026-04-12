@@ -1,5 +1,5 @@
 import { fsrs, type Card, State, type FSRSParameters, createEmptyCard, Rating } from 'ts-fsrs';
-import type { Schedule, ScheduleUnit, QuranMetadata, ScriptStyle } from '../types/index';
+import type { Schedule, QuranMetadata, ScriptStyle } from '../types/index';
 import { calculateMacroRUCard, actualizeMacroRoutine } from './memorizationEngine.v2';
 import { SURAH_NAMES } from './constants';
 
