@@ -10,6 +10,9 @@ export type DayTaskType = 'empty' | 'normal' | 'today' | 'hasTasks';
 interface Props {
   taskMap: Record<string, DailyTask[]>;
   scriptStyle: ScriptStyle;
+  currentDate: Date;
+  isDevMode: boolean;
+  onDateClick: (date: Date) => void;
 }
 
 const WEEKDAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];

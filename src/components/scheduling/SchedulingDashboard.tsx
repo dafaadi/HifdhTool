@@ -271,7 +271,7 @@ export function SchedulingDashboard({ scriptStyle }: Props) {
         scriptStyle={scriptStyle} 
         currentDate={currentDate}
         isDevMode={isDevMode}
-        onDateClick={(d) => isDevMode && setVirtualDate(d)}
+        onDateClick={(d: Date) => isDevMode && setVirtualDate(d)}
       />
       <ScheduleManager />
 

@@ -257,28 +257,6 @@ export function collectSUEntries(
   return entries;
 }
 
-/** Helper for Ayah display labels (e.g. "Ayah 5" or "Ayahs 3–8" or cross-surah format). */
-function displayLabelFromAyahSlice(group: SUEntry[]): string {
-  const first = group[0];
-  const last = group[group.length - 1];
-
-  const getAyahNum = (label: string) => {
-    const match = label.match(/Ayah (\d+)/);
-    return match ? parseInt(match[1], 10) : 0;
-  };
-
-  const fA = getAyahNum(first.label);
-  const lA = getAyahNum(last.label);
-
-  if (first.surahNumber === last.surahNumber) {
-    if (fA === lA) return `Ayah ${fA}`;
-    return `Ayahs ${fA}–${lA}`;
-  } else {
-    const fName = SURAH_NAMES[first.surahNumber - 1];
-    const lName = SURAH_NAMES[last.surahNumber - 1];
-    return `${fName} ${fA} → ${lName} ${lA}`;
-  }
-}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 5. distributeSequentially  (core scheduler)
