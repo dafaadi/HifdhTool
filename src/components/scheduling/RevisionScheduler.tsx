@@ -5,7 +5,7 @@ import {
   type ScriptStyle, type QuranMetadata, type DailyTask,
   SURAH_NAMES, isFullyContained, countSubUnits, getValidSUs,
   distributeSequentially
-} from '../../utils/memorizationEngine';
+} from '../../utils/memorizationEngine.v2';
 import type { Schedule, RevisionUnitData } from '../../types';
 import { createBaselineFSRSCard } from '../../utils/fsrsLogic';
 import rawMeta from '../../data/quran-metadata.json';
@@ -370,13 +370,15 @@ export function RevisionScheduler({ scriptStyle, onGenerateTasks, onClearTasks }
     const revisionList: RevisionUnitData[] = revisionQueue.map((item, idx) => {
       // Filter tasks belonging to THIS revision unit
       const myTasks = allScheduledTasks.filter(t => t.ruId === item.id);
-      const fsrsCard = createBaselineFSRSCard('normal');
-
-      // Anchor RU due date to 7 days after its FIRST scheduled task (not today's date)
+      // Anchor RU due date to 7 days after its LAST scheduled task
+      let fsrsCard;
       if (myTasks.length > 0) {
-        const earliestTime = Math.min(...myTasks.map(t => new Date(t.fsrsCard.due).getTime()));
-        const anchorDate = new Date(earliestTime);
+        const latestTime = Math.max(...myTasks.map(t => new Date(t.fsrsCard.due).getTime()));
+        const anchorDate = new Date(latestTime);
+        fsrsCard = createBaselineFSRSCard('normal', anchorDate);
         fsrsCard.due = new Date(anchorDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+      } else {
+        fsrsCard = createBaselineFSRSCard('normal');
       }
       
       // Calculate active days for this RU specifically

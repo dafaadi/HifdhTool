@@ -8,7 +8,7 @@ import {
   EyeOff
 } from 'lucide-react';
 import type { Schedule } from '../../types';
-import { SURAH_NAMES } from '../../utils/memorizationEngine';
+import { SURAH_NAMES } from '../../utils/memorizationEngine.v2';
 import './ScheduleManager.css';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────

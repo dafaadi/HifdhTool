@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import type { ScriptStyle } from '../utils/memorizationEngine';
+import type { ScriptStyle } from '../utils/memorizationEngine.v2';
 import { SettingsButton } from './SettingsButton';
 import { PreviouslyMemorizedCard } from './PreviouslyMemorizedCard';
 import { Logo } from './Logo';

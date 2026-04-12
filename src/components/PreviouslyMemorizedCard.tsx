@@ -8,7 +8,7 @@ import {
   type GraduationSettings,
   type ScriptStyle,
   type QuranMetadata,
-} from '../utils/memorizationEngine';
+} from '../utils/memorizationEngine.v2';
 import { SearchableDropdown, type DropdownOption } from './ui/SearchableDropdown';
 import rawMeta from '../data/quran-metadata.json';
 

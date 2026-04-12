@@ -30,6 +30,8 @@ export interface ScheduleUnit {
   reviewLogs: ReviewLog[];
   note: string;
   createdAt: string;
+  isMacroRoutine: boolean;
+  dueDateLimit?: string | Date;
   isDeleted: boolean;
 }
 

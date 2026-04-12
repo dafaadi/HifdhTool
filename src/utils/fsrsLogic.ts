@@ -1,5 +1,7 @@
 import { fsrs, type Card, State, type FSRSParameters, createEmptyCard, Rating } from 'ts-fsrs';
-import type { Schedule, ScheduleUnit } from '../types';
+import type { Schedule, ScheduleUnit, QuranMetadata, ScriptStyle } from '../types/index';
+import { calculateMacroRUCard, actualizeMacroRoutine } from './memorizationEngine.v2';
+import { SURAH_NAMES } from './constants';
 
 // Custom parameters for FSRS for Quran Hifdh
 export const quranFsrsParams: Partial<FSRSParameters> = {
@@ -15,9 +17,9 @@ export const quranFsrs = fsrs(quranFsrsParams);
  * that the user already knows (Previously Memorized), rather than treating them
  * as completely brand-new material.
  */
-export function createBaselineFSRSCard(strength: 'weak' | 'normal' | 'solid'): Card {
-  const card = createEmptyCard();
-  const now = new Date();
+export function createBaselineFSRSCard(strength: 'weak' | 'normal' | 'solid', baseDate: Date = new Date()): Card {
+  const card = createEmptyCard(baseDate);
+  const now = baseDate;
 
   if (strength === 'weak') {
     // Return standard empty card
@@ -47,55 +49,18 @@ export function createBaselineFSRSCard(strength: 'weak' | 'normal' | 'solid'): C
   return card;
 }
 
-/**
- * Calculates a parent RevisionUnit (RU) card by aggregating its child ScheduleUnits (SUs).
- * Uses a discounted mean for Stability and a stamina penalty for Difficulty.
- */
-export function calculateMacroRUCard(scheduleList: ScheduleUnit[]): Card {
-  const activeSUs = scheduleList.filter(su => !su.isDeleted);
-  
-  if (activeSUs.length === 0) {
-    return createEmptyCard();
-  }
-
-  let totalStability = 0;
-  let totalDifficulty = 0;
-  let totalReps = 0;
-
-  activeSUs.forEach(su => {
-    totalStability += su.fsrsCard.stability;
-    totalDifficulty += su.fsrsCard.difficulty;
-    totalReps += su.fsrsCard.reps;
-  });
-
-  const avgStability = totalStability / activeSUs.length;
-  const avgDifficulty = totalDifficulty / activeSUs.length;
-  const avgReps = Math.round(totalReps / activeSUs.length);
-
-  // 1. Calculate the average stability, then apply a 25% discount penalty
-  const macroStability = avgStability * 0.75;
-  
-  // 2. Calculate the average difficulty, then apply a 20% stamina penalty (capped at 10)
-  const macroDifficulty = Math.min(avgDifficulty * 1.2, 10);
-
-  const ruCard = createEmptyCard();
-  ruCard.stability = macroStability;
-  ruCard.difficulty = macroDifficulty;
-  ruCard.reps = avgReps;
-  ruCard.state = State.Review; // Force into review state assuming children have been reviewed
-
-  // Calculate new due date strictly based on the newly calculated stability
-  // (Using stability directly as the interval in days)
-  const intervalDays = Math.max(1, Math.round(macroStability));
-  const now = new Date();
-  ruCard.due = new Date(now.getTime() + intervalDays * 24 * 60 * 60 * 1000);
-
-  return ruCard;
+export interface GradeResult {
+  schedules: Schedule[];
+  actualization?: {
+    ruLabel: string;
+    newMacroDueDate: string;
+  };
 }
 
 /**
  * Robust state-update handler for grading a ScheduleUnit.
  * Modifies the specific SU, and conditionally updates its parent RU if it is a Macro Routine.
+ * Returns both the updated schedules and any actualization event data.
  */
 export function handleGradeScheduleUnit(
   schedules: Schedule[],
@@ -103,48 +68,105 @@ export function handleGradeScheduleUnit(
   ruId: string,
   suId: string,
   rating: Rating,
-  options: { isMacroRoutine: boolean }
-): Schedule[] {
-  return schedules.map(schedule => {
+  metadata: QuranMetadata,
+  scriptStyle: ScriptStyle,
+  now: Date = new Date(),
+  wasFailedToday: boolean = false,
+  startingCard?: Card
+): GradeResult {
+  let actualizationEvent: GradeResult['actualization'];
+
+  const updatedSchedules = schedules.map(schedule => {
     if (schedule.id !== scheduleId) return schedule;
 
     const newRevisionList = schedule.revisionList.map(ru => {
       if (ru.id !== ruId) return ru;
 
       let suWasUpdated = false;
+      let wasMacroTask = false;
       
-      // Update the specific child SU
+      // 1. Update the specific child SU and capture its generational state
       const newScheduleList = ru.scheduleList.map(su => {
         if (su.id !== suId) return su;
 
         suWasUpdated = true;
-        const now = new Date();
-        
-        // Pass current fsrsCard and the user's rating into the ts-fsrs engine
-        const schedulingRecords = quranFsrs.repeat(su.fsrsCard, now);
+        wasMacroTask = su.isMacroRoutine;
+
+        // ALWAYS compute the next FSRS state — we must persist the graded card
+        // regardless of rating, so the today-shell is never stale.
+        // We use the startingCard override (from memory-only Again failures) if provided.
+        const cardToGrade = startingCard ?? su.fsrsCard;
+        const schedulingRecords = quranFsrs.repeat(cardToGrade, now);
         const recordLog = (schedulingRecords as any)[rating];
-        
-        return {
+        const nextDueDate = recordLog.card.due;
+
+        // BASE: always persist the updated card + log
+        // We inject the current Macro status into the log as historical metadata
+        const updatedSU = {
           ...su,
           fsrsCard: recordLog.card,
-          reviewLogs: [...su.reviewLogs, recordLog.log]
+          reviewLogs: [...su.reviewLogs, { ...recordLog.log, wasMacroRoutine: su.isMacroRoutine } as any],
         };
+
+        // --- FSRS Weakness Filter Path ---
+        // THE BOUNCER: archive if the next due date would exceed the Event Horizon
+        const hitLimit = su.dueDateLimit && nextDueDate >= new Date(su.dueDateLimit);
+
+        // THE WEAKNESS FILTER REFINED:
+        // Only spawn and save a future Micro-Review IF the final rating was 2 ("Hard") 
+        // OR if the task was failed earlier today (marked as Again in session queue).
+        const isStruggling = rating === Rating.Hard || wasFailedToday;
+
+        if (hitLimit || !isStruggling) {
+          // Archive from future scheduling; current graded state is still saved above.
+          return { ...updatedSU, isDeleted: true };
+        }
+
+        // Struggling path: tag so a future micro-review slot is spawned
+        return { ...updatedSU, isMacroRoutine: false };
       });
 
       if (!suWasUpdated) return ru;
 
-      // 3. Conditional Parent Trigger (Live Umbrella Date)
-      if (options.isMacroRoutine) {
-        // Instantly recalculate the parent RU's projected future review date
-        const macroCard = calculateMacroRUCard(newScheduleList);
-        return {
-          ...ru,
-          scheduleList: newScheduleList,
-          fsrsCard: macroCard
-        };
+      // STEP 2: TRIGGER ACTUALIZATION (THE SWEEP)
+      if (wasMacroTask) {
+        const latestTime = Math.max(...newScheduleList.map(s => new Date(s.fsrsCard.due).getTime()));
+        const anchorDate = new Date(latestTime);
+        const macroCard = calculateMacroRUCard(newScheduleList, anchorDate);
+
+        // A Macro pass is considered complete when all active macro tasks have at least one review log.
+        const isMacroCompleted = !newScheduleList.some(s => s.isMacroRoutine && !s.isDeleted && s.reviewLogs.length === 0);
+
+        if (isMacroCompleted) {
+          const updatedRU = {
+            ...ru,
+            scheduleList: newScheduleList,
+            fsrsCard: macroCard
+          };
+          const actualizedRU = actualizeMacroRoutine(updatedRU, metadata, scriptStyle);
+          
+          actualizationEvent = {
+            ruLabel: `${ru.unitValue}. ${metadata.madani.surah[String(ru.unitValue)] ? '' : ''}`, // Will refine label below
+            newMacroDueDate: macroCard.due.toISOString()
+          };
+          
+          // Refine label if it's Surah
+          if (ru.unitType === 'Surah') {
+            actualizationEvent.ruLabel = `${ru.unitValue}. ${SURAH_NAMES[Number(ru.unitValue) - 1]}`;
+          } else {
+            actualizationEvent.ruLabel = `${ru.unitType} ${ru.unitValue}`;
+          }
+
+          return actualizedRU;
+        } else {
+          return {
+            ...ru,
+            scheduleList: newScheduleList,
+            fsrsCard: macroCard
+          };
+        }
       }
 
-      // If FALSE: Do nothing else, save state.
       return {
         ...ru,
         scheduleList: newScheduleList
@@ -156,4 +178,10 @@ export function handleGradeScheduleUnit(
       revisionList: newRevisionList
     };
   });
+
+  return {
+    schedules: updatedSchedules,
+    actualization: actualizationEvent
+  };
 }
+

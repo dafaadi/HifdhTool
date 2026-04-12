@@ -261,3 +261,19 @@
 .drm-rating-btn--hard  { color: #f1d592; }
 .drm-rating-btn--good  { color: #4ade80; }
 .drm-rating-btn--easy  { color: #60a5fa; }
+
+/* Visual Feedback: Again Loop Flash */
+.drm-content--flash {
+  animation: drm-flash 0.5s ease-out;
+}
+
+.drm-content--micro {
+  opacity: 0.85;
+  border: 1px dashed #4b5563;
+}
+
+@keyframes drm-flash {
+  0% { border-color: #2a2a2a; box-shadow: 0 0 0 0 rgba(148, 163, 184, 0); }
+  50% { border-color: #94a3b8; box-shadow: 0 0 20px 0 rgba(148, 163, 184, 0.3); background: #1a1a1a; }
+  100% { border-color: #2a2a2a; box-shadow: 0 0 0 0 rgba(148, 163, 184, 0); }
+}

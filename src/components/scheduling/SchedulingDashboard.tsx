@@ -5,7 +5,7 @@ import { CalendarPreview } from './CalendarPreview';
 import { ScheduleManager } from './ScheduleManager';
 import { DailyRoutineModal } from './DailyRoutineModal';
 import { Brain, Sparkles } from 'lucide-react';
-import { type ScriptStyle, type DailyTask, SURAH_NAMES } from '../../utils/memorizationEngine';
+import { type ScriptStyle, type DailyTask, SURAH_NAMES } from '../../utils/memorizationEngine.v2';
 import type { Schedule } from '../../types';
 import './SchedulingDashboard.css';
 
@@ -22,12 +22,14 @@ function getRuLabel(type: string, value: string | number): string {
 
 function DailyActionCards({ 
   confirmedTasks, 
-  onStartRevision 
+  onStartRevision,
+  currentDate
 }: { 
   confirmedTasks: Record<string, DailyTask[]>,
-  onStartRevision: (tasks: DailyTask[]) => void
+  onStartRevision: (tasks: DailyTask[]) => void,
+  currentDate: Date
 }) {
-  const today = new Date();
+  const today = currentDate;
   const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   const tasksForToday = confirmedTasks[todayKey] || [];
   
@@ -122,6 +124,15 @@ function DailyActionCards({
 }
 
 export function SchedulingDashboard({ scriptStyle }: Props) {
+  const [virtualDate, setVirtualDate] = useState<Date>(new Date());
+  const [isDevMode, setIsDevMode] = useState(false);
+
+  useEffect(() => {
+    setIsDevMode(localStorage.getItem('devMode') === 'true');
+  }, []);
+
+  const currentDate = isDevMode ? virtualDate : new Date();
+
   const [previewTasks, setPreviewTasks] = useState<Record<string, DailyTask[]>>({});
   const [confirmedTasks, setConfirmedTasks] = useState<Record<string, DailyTask[]>>({});
   const [sessionTasks, setSessionTasks] = useState<DailyTask[]>([]);
@@ -141,37 +152,44 @@ export function SchedulingDashboard({ scriptStyle }: Props) {
           const ruLabel = getRuLabel(ru.unitType, ru.unitValue);
           
           ru.scheduleList.forEach(su => {
-            if (su.isDeleted) return;
-            // fsrsCard.due might be a string in JSON
-            const d = new Date(su.fsrsCard.due);
-            const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-            
-            if (!taskMap[dateKey]) taskMap[dateKey] = [];
-            
+            // Reconstruct minimal details
             const dailyTask: DailyTask = {
               ...su,
               ruId: ru.id,
               ruType: ru.unitType,
               ruLabel,
-              details: [su.displayLabel] // Reconstruct minimal details
+              details: [su.displayLabel]
             };
-            taskMap[dateKey].push(dailyTask);
 
-            // Shell pill tracking for completed tasks
-            if (su.reviewLogs && su.reviewLogs.length > 0) {
-              const lastLog = su.reviewLogs[su.reviewLogs.length - 1];
-              // the review date inside ts-fsrs ReviewLog might be string or Date, parse it
-              const lrDate = new Date(lastLog.review);
-              const lrDateKey = `${lrDate.getFullYear()}-${String(lrDate.getMonth() + 1).padStart(2, '0')}-${String(lrDate.getDate()).padStart(2, '0')}`;
+            // 1. Future Scheduling (Only if not deleted/archived)
+            if (!su.isDeleted) {
+              const d = new Date(su.fsrsCard.due);
+              const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
               
-              if (!taskMap[lrDateKey]) taskMap[lrDateKey] = [];
-              // Only push if we haven't already pushed it
-              if (!taskMap[lrDateKey].some(t => t.id === dailyTask.id && t.isCompleted)) {
-                taskMap[lrDateKey].push({
-                  ...dailyTask,
-                  isCompleted: true
-                });
-              }
+              if (!taskMap[dateKey]) taskMap[dateKey] = [];
+              taskMap[dateKey].push(dailyTask);
+            }
+
+            // 2. Shell pill tracking for completed tasks (even if archived/deleted)
+            // We only show a shell if there is a successful review (Rating > 1)
+            if (su.reviewLogs && su.reviewLogs.length > 0) {
+              su.reviewLogs.forEach(log => {
+                const ratingNum = typeof log.rating === 'number' ? log.rating : 3; // fallback to Good if weird
+                if (ratingNum === 1) return; // Skip Anki "Again" as a completion shell
+
+                const lrDate = new Date(log.review);
+                const lrDateKey = `${lrDate.getFullYear()}-${String(lrDate.getMonth() + 1).padStart(2, '0')}-${String(lrDate.getDate()).padStart(2, '0')}`;
+                
+                if (!taskMap[lrDateKey]) taskMap[lrDateKey] = [];
+                // Ensure we don't duplicate shells for the same task on the same day if user did Hard then Easy
+                if (!taskMap[lrDateKey].some(t => t.id === dailyTask.id && t.isCompleted)) {
+                  taskMap[lrDateKey].push({
+                    ...dailyTask,
+                    isMacroRoutine: (log as any).wasMacroRoutine ?? su.isMacroRoutine,
+                    isCompleted: true
+                  });
+                }
+              });
             }
           });
         });
@@ -205,6 +223,30 @@ export function SchedulingDashboard({ scriptStyle }: Props) {
 
   return (
     <div className="sd-section">
+      {isDevMode && (
+        <div style={{ 
+          background: 'rgba(239, 68, 68, 0.1)', 
+          border: '1px solid #ef4444', 
+          color: '#ef4444', 
+          padding: '12px', 
+          borderRadius: '8px', 
+          marginBottom: '20px',
+          fontWeight: 'bold',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <span>🛠 DEV MODE | Virtual Date: {currentDate.toLocaleDateString()}</span>
+          <button 
+            className="sd-cal-nav-btn" 
+            onClick={() => setVirtualDate(new Date())}
+            style={{ padding: '4px 12px', fontSize: '12px' }}
+          >
+            Reset to Today
+          </button>
+        </div>
+      )}
+
       <h2 className="sd-heading">
         Create your schedule to match a pace that suits you!
       </h2>
@@ -221,15 +263,24 @@ export function SchedulingDashboard({ scriptStyle }: Props) {
       <DailyActionCards 
         confirmedTasks={confirmedTasks} 
         onStartRevision={handleStartRevision}
+        currentDate={currentDate}
       />
 
-      <CalendarPreview taskMap={mergedTaskMap} scriptStyle={scriptStyle} />
+      <CalendarPreview 
+        taskMap={mergedTaskMap} 
+        scriptStyle={scriptStyle} 
+        currentDate={currentDate}
+        isDevMode={isDevMode}
+        onDateClick={(d) => isDevMode && setVirtualDate(d)}
+      />
       <ScheduleManager />
 
       <DailyRoutineModal 
         isOpen={isSessionOpen}
         onClose={() => setIsSessionOpen(false)}
         tasks={sessionTasks}
+        scriptStyle={scriptStyle}
+        currentDate={currentDate}
       />
     </div>
   );

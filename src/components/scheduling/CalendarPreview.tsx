@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, X, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
-import { type DailyTask, SURAH_NAMES, type ScriptStyle, generateProjectedSUs, type ProjectedTask } from '../../utils/memorizationEngine';
+import { type DailyTask, SURAH_NAMES, type ScriptStyle, generateProjectedSUs, type ProjectedTask } from '../../utils/memorizationEngine.v2';
 import metadata from '../../data/quran-metadata.json';
 import type { Schedule } from '../../types';
 import './SchedulingDashboard.css';
@@ -64,20 +64,23 @@ function TaskLabel({ task }: { task: DailyTask | ProjectedTask }) {
   // If the label identifies itself (e.g. "Al-Baqarah" or "Juz 1"), 
   // we don't need a Surah prefix based on the starting word.
   const isSelfIdentified = task.displayLabel.includes(surahName || '___') || isLargeUnit;
+  
+  const isMicro = (task as DailyTask).isMacroRoutine === false;
+  const prefix = isMicro ? <span style={{ fontSize: '0.95em', fontWeight: 600, opacity: 0.8, marginRight: '4px' }}>Micro-Review:</span> : null;
 
   if (isSelfIdentified) {
-    return <span>{task.displayLabel}</span>;
+    return <span>{prefix}{task.displayLabel}</span>;
   }
 
   return (
     <>
-      <span style={{ fontWeight: 700 }}>{surahName}:</span> {task.displayLabel}
+      {prefix}<span style={{ fontWeight: 700 }}>{surahName}:</span> {task.displayLabel}
     </>
   );
 }
 
-export function CalendarPreview({ taskMap, scriptStyle }: Props) {
-  const today = new Date();
+export function CalendarPreview({ taskMap, scriptStyle, currentDate, isDevMode, onDateClick }: Props) {
+  const today = currentDate;
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
 
@@ -204,7 +207,7 @@ export function CalendarPreview({ taskMap, scriptStyle }: Props) {
          currentMonth === today.getMonth() && 
          d === today.getDate();
          
-       const dayTasks = (taskMap[dateKey] || []).filter(t => !hiddenRuIds.has(t.ruId || ''));
+       const dayTasks = (taskMap[dateKey] || []).filter(t => !hiddenRuIds.has(t.ruId || '') && (!t.isDeleted || t.isCompleted));
        const dayProjections = showProjections ? (projections[dateKey] || []) : [];
        let type: DayTaskType = isToday ? 'today' : ((dayTasks.length > 0 || dayProjections.length > 0) ? 'hasTasks' : 'normal');
 
@@ -218,9 +221,9 @@ export function CalendarPreview({ taskMap, scriptStyle }: Props) {
     }
     
     return cells;
-  }, [currentYear, currentMonth, taskMap, today]);
+  }, [currentYear, currentMonth, taskMap, today, showProjections, hiddenRuIds, scriptStyle]);
 
-  const activeModalTasks = modalDate ? (taskMap[modalDate] || []) : [];
+  const activeModalTasks = modalDate ? (taskMap[modalDate] || []).filter(t => !t.isDeleted) : [];
 
   return (
     <>
@@ -260,8 +263,13 @@ export function CalendarPreview({ taskMap, scriptStyle }: Props) {
             {calendarCells.map((c, i) => (
               <div 
                 key={i} 
-                className={`sd-cal-day ${c.day ? 'sd-cal-day--active' : ''} ${c.type === 'today' ? 'sd-cal-day--today' : ''} ${c.type === 'empty' ? 'sd-cal-day--empty' : ''} ${c.dailyTasks.length > 0 ? 'sd-cal-day--clickable' : ''}`}
-                onClick={() => { if (c.dateKey) openModal(c.dateKey) }}
+                className={`sd-cal-day ${c.day ? 'sd-cal-day--active' : ''} ${c.type === 'today' ? 'sd-cal-day--today' : ''} ${c.type === 'empty' ? 'sd-cal-day--empty' : ''} ${(c.dailyTasks.length > 0 || isDevMode) ? 'sd-cal-day--clickable' : ''} ${isDevMode ? 'sd-cal-day--dev' : ''}`}
+                onClick={() => { 
+                  if (c.dateKey) {
+                    if (isDevMode) onDateClick(new Date(c.dateKey));
+                    openModal(c.dateKey);
+                  }
+                }}
               >
                  {c.day && (
                    <>
@@ -278,10 +286,11 @@ export function CalendarPreview({ taskMap, scriptStyle }: Props) {
                              className={`sd-cal-task-label ${isCompleted ? 'sd-cal-task-label--completed' : ''} ${isHighlighted ? 'sd-cal-task-label--highlight' : ''}`} 
                              style={!isCompleted ? {
                                background: theme.bg,
-                               border: `1px solid ${theme.border}`,
-                               color: theme.tx
+                               border: `1px ${t.isMacroRoutine === false ? 'dashed' : 'solid'} ${theme.border}`,
+                               color: theme.tx,
+                               opacity: t.isMacroRoutine === false ? 0.75 : 1
                              } : undefined}
-                             title={`${SURAH_NAMES[t.surahNumber - 1]}: ${t.displayLabel}`}
+                             title={`${t.isMacroRoutine === false ? '[Micro-Review] ' : ''}${SURAH_NAMES[t.surahNumber - 1]}: ${t.displayLabel}`}
                            >
                              <TaskLabel task={t} />
                              {isCompleted && <CheckCircle2 size={12} style={{ display: 'inline', marginLeft: '4px', verticalAlign: 'middle', marginTop: '-2px' }}/>}

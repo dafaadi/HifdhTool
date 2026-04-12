@@ -579,6 +579,22 @@ html:not(.dark-mode) .sd-date-input::-webkit-calendar-picker-indicator {
 
 .sd-cal-day:nth-child(7n) { border-right: none; }
 
+.sd-cal-day--dev {
+  border: 1px dashed rgba(239, 68, 68, 0.4) !important;
+  cursor: pointer;
+}
+
+.sd-cal-day--dev:hover {
+  background: rgba(239, 68, 68, 0.05);
+  border-color: #ef4444 !important;
+}
+
+.sd-cal-day--dev .sd-cal-day-num {
+  color: #ef4444;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 /* Day type modifiers */
 .sd-cal-day--active           { color: #9ca3af; }
 .sd-cal-day--today            { background: #1c1c1c; }

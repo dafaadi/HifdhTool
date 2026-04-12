@@ -1,5 +1,5 @@
 import { BookOpen, Search, ChevronDown } from 'lucide-react';
-import type { ScriptStyle } from '../../utils/memorizationEngine';
+import type { ScriptStyle } from '../../utils/memorizationEngine.v2';
 
 const MEM_UNITS = ['Ayah', 'Page', "Rub'", 'Ruku', 'Surah'];
 
