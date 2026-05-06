@@ -65,9 +65,6 @@ export const TaskQuranSnippet: React.FC<TaskQuranSnippetProps> = ({
 
     // 2. Iterate through pages mentioned in unit (or all if not reliable)
     // unit.pageNumbers contains the pages we need to check
-    const targetPages = unit.pageNumbers.length > 0 
-      ? unit.pageNumbers.flatMap(p => [p - 1, p, p + 1].filter(pg => pg >= 1 && pg <= quranData.length))
-      : Array.from({ length: quranData.length }, (_, i) => i + 1);
 
     // Filter and collect words within context range
     quranData.forEach((page) => {
