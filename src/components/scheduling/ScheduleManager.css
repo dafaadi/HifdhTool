@@ -55,12 +55,24 @@
   border: 1px solid transparent;
 }
 
-/* Varied backgrounds as per mockup */
+/* Varied backgrounds as per mockup (Revision) */
 .sm-schedule-card:nth-child(odd) { background: #f0f7f0; } /* Light green tint */
 .sm-schedule-card:nth-child(even) { background: #fffcf0; } /* Light gold tint */
 
 .dark-mode .sm-schedule-card:nth-child(odd) { background: #1b261b; }
 .dark-mode .sm-schedule-card:nth-child(even) { background: #26241b; }
+
+/* Memorization overrides */
+.sm-schedule-card.sm-schedule-card--memorization {
+  background: rgba(234, 179, 8, 0.1);
+  border: 1px solid rgba(202, 138, 4, 0.3);
+}
+.sm-schedule-card.sm-schedule-card--memorization .sm-card-serial {
+  color: #ca8a04;
+}
+.sm-schedule-card.sm-schedule-card--memorization .sm-title-input {
+  border-bottom: 1px solid #ca8a04;
+}
 
 .sm-card-header {
   display: flex;

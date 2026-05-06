@@ -24,6 +24,15 @@
   --sd-input-border:   #2a2a2a;
   --sd-row-hover:      rgba(255,255,255,0.055);
   --sd-row-border:     rgba(255,255,255,0.07);
+
+  /* Calendar Text Variables (Dark Mode defaults) */
+  --sd-txt-rev-0: #86efac;
+  --sd-txt-rev-1: #4ade80;
+  --sd-txt-rev-2: #6ee7b7;
+  --sd-txt-rev-3: #34d399;
+  --sd-txt-rev-4: #bef264;
+  --sd-txt-rev-5: #d9f99d;
+  --sd-txt-memo:  #fde047;
 }
 
 /* ═══════════════════════════════════════
@@ -843,6 +852,70 @@ html:not(.dark-mode) .sd-card--memorization {
   border-color: #fef08a;
 }
 
+html:not(.dark-mode) {
+  --sd-txt-rev-0: #064e3b; /* Emerald 900 */
+  --sd-txt-rev-1: #065f46; /* Emerald 800 */
+  --sd-txt-rev-2: #047857; /* Emerald 700 */
+  --sd-txt-rev-3: #166534; /* Green 800 */
+  --sd-txt-rev-4: #3f6212; /* Lime 800 */
+  --sd-txt-rev-5: #4d7c0f; /* Lime 700 */
+  --sd-txt-memo:  #854d0e; /* Amber 800 (Bronze) */
+  --sd-txt-memo-deep: #78350f; /* Amber 900 */
+  --sd-txt-slate: #1e293b; /* Slate 800 */
+}
+
+html:not(.dark-mode) .sd-heading { color: var(--sd-txt-slate); }
+html:not(.dark-mode) .sd-card--revision .sd-card-title { color: var(--sd-txt-rev-0); }
+html:not(.dark-mode) .sd-card--memorization .sd-card-title { color: var(--sd-txt-memo-deep); }
+html:not(.dark-mode) .sd-action-card h3 { color: inherit; } /* Handle specifically under card types */
+html:not(.dark-mode) .sd-action-card--revision h3 { color: #064e3b; }
+html:not(.dark-mode) .sd-action-card--memorization h3 { color: #78350f; }
+
+html:not(.dark-mode) .sd-cal-meta h2 { color: #1e293b; }
+html:not(.dark-mode) .sm-title { color: #1e293b; }
+html:not(.dark-mode) .sm-schedule-card .sm-card-title { color: #2d3748; } /* Default */
+html:not(.dark-mode) .sm-schedule-card--memorization .sm-card-title { color: #854d0e; }
+html:not(.dark-mode) .sm-schedule-card:not(.sm-schedule-card--memorization) .sm-card-title { color: #065f46; }
+
+html:not(.dark-mode) .pm-title { color: #1e293b; }
+html:not(.dark-mode) .pm-subtitle { color: #64748b; } /* Slate 500 */
+html:not(.dark-mode) .sm-card-serial { color: #64748b; } 
+html:not(.dark-mode) .sm-schedule-card--memorization .sm-card-serial { color: #b45309; } /* Amber 700 */
+html:not(.dark-mode) .sm-schedule-card:not(.sm-schedule-card--memorization) .sm-card-serial { color: #059669; } /* Emerald 600 */
+
+/* Schedule Manager Internal Track Overrides */
+html:not(.dark-mode) .sm-schedule-card--memorization .sm-ru-name { color: #854d0e; font-weight: 700; }
+html:not(.dark-mode) .sm-schedule-card--memorization .sm-date { color: #b45309; font-weight: 600; }
+html:not(.dark-mode) .sm-schedule-card--memorization .sm-su-item {
+  color: #92400e;
+  border-left: 2px solid #fde68a;
+}
+
+html:not(.dark-mode) .sm-schedule-card:not(.sm-schedule-card--memorization) .sm-ru-name { color: #065f46; font-weight: 700; }
+html:not(.dark-mode) .sm-schedule-card:not(.sm-schedule-card--memorization) .sm-date { color: #059669; font-weight: 600; }
+html:not(.dark-mode) .sm-schedule-card:not(.sm-schedule-card--memorization) .sm-su-item {
+  color: #065f46;
+  border-left: 2px solid #bbf7d0;
+}
+
+/* Previously Memorized (Bronze Track) */
+html:not(.dark-mode) .pm-card {
+  background: #fdfaf0 !important;
+  border-color: #fde68a !important;
+}
+html:not(.dark-mode) .pm-header .pm-icon {
+  background: rgba(133, 77, 14, 0.1);
+  color: #854d0e;
+}
+html:not(.dark-mode) .pm-log-btn {
+  background:   #fcd34d; /* Lighter Amber */
+  border-color: #f59e0b; 
+  color:        #78350f; /* Dark Bronze text */
+}
+html:not(.dark-mode) .pm-log-btn:hover {
+  background:   #fbbf24;
+}
+
 html:not(.dark-mode) .sd-search-wrap {
   background:   #fff;
   border-color: #d1d5db;
@@ -875,6 +948,18 @@ html:not(.dark-mode) .sd-select {
   color:        #1f2937;
 }
 
+/* Context-Specific Inputs */
+html:not(.dark-mode) .sd-card--revision .sdd-input,
+html:not(.dark-mode) .sd-card--revision .sd-select {
+  border-color: #bbf7d0 !important;
+  color: #064e3b !important;
+}
+html:not(.dark-mode) .sd-card--memorization .sdd-input,
+html:not(.dark-mode) .sd-card--memorization .sd-select {
+  border-color: #fde68a !important;
+  color: #854d0e !important;
+}
+
 html:not(.dark-mode) .sd-card--revision .sd-unit-output { color: #059669; }
 html:not(.dark-mode) .sd-card--memorization .sd-unit-output { color: #92400e; }
 
@@ -889,6 +974,36 @@ html:not(.dark-mode) .sd-cal-day--revision-task     { background: #ecf7f0; color
 html:not(.dark-mode) .sd-cal-day--memorization-task { background: #fdf8e3; color: #92400e; }
 html:not(.dark-mode) .sd-cal-day--empty { background: #fafafa; }
 html:not(.dark-mode) .sd-cal-nav-btn { background: #fff; border-color: #d1d5db; color: #374151; }
+html:not(.dark-mode) .sd-cal-nav-btn:hover { background: #f9fafb; border-color: #9ca3af; color: #111827; }
+
+html:not(.dark-mode) .sd-cal-task-label {
+  /* No longer forces black - color is inherited from getTaskStyles using variables */
+  font-weight: 700;
+}
+
+html:not(.dark-mode) .sd-cal-task-label--completed {
+  opacity: 1 !important;
+  background: #f3f4f6 !important;
+  border-color: #d1d5db !important;
+  color: #6b7280 !important;
+}
+
+html:not(.dark-mode) .sd-visibility-toggle {
+  background: #f9fafb;
+  border-color: #d1d5db;
+  color: #4b5563;
+}
+
+html:not(.dark-mode) .sd-visibility-toggle:hover {
+  background: #fff;
+  border-color: #9ca3af;
+  color: #111827;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+html:not(.dark-mode) .sd-cal-task-label--highlight {
+  box-shadow: 0 0 12px rgba(250, 204, 21, 0.6);
+}
 
 html:not(.dark-mode) .sd-modal-content {
   background: #fff;
@@ -1024,9 +1139,44 @@ html:not(.dark-mode) .sd-textarea { background: #f9fafb; border-color: #d1d5db; 
   font-family: 'Playfair Display', serif;
   font-size:   1.7rem;
   font-weight: 700;
-  color:       #fff;
+  color:       #f3f4f6; /* Dark Mode */
   margin:      4px 0 0 0;
 }
+
+/* Light Mode Overrides for Headings */
+html:not(.dark-mode) .sd-action-heading { color: #1e293b; }
+html:not(.dark-mode) .sd-action-card--revision .sd-action-heading { color: #064e3b; }
+html:not(.dark-mode) .sd-action-card--memorization .sd-action-heading { color: #78350f; }
+
+.sd-memo-lock-alert {
+  margin-top:      20px;
+  background:      rgba(202, 138, 4, 0.1);
+  border:          1px solid #ca8a04;
+  border-radius:   8px;
+  padding:         16px;
+  color:           #fef08a; /* Lightened color for dark mode */
+  text-align:      center;
+  font-size:       0.95rem;
+  line-height:     1.4;
+  font-weight:     400; /* Lighter weight as requested */
+}
+
+.sd-memo-lock-alert-title {
+  display:       block;
+  margin-bottom: 8px;
+  color:         #fef9c3;
+  font-weight:   700;
+}
+
+html:not(.dark-mode) .sd-memo-lock-alert {
+  color: #854d0e;
+  font-weight: 500;
+}
+
+html:not(.dark-mode) .sd-memo-lock-alert-title {
+  color: #a16207;
+}
+
 
 /* Light Mode Overrides for Label */
 html:not(.dark-mode) .sd-action-label {
@@ -1078,7 +1228,7 @@ html:not(.dark-mode) .sd-action-card--memorization {
 }
 html:not(.dark-mode) .sd-action-heading { color: #110c00; }
 html:not(.dark-mode) .sd-action-portion { color: #6b7280; }
-html:not(.dark-mode) .sd-action-btn--revision { background: #111827; color: #fff; }
+html:not(.dark-mode) .sd-action-btn--revision { background: #86efac; color: #064e3b; }
 
 @media (max-width: 700px) {
   .sd-action-row { grid-template-columns: 1fr; }

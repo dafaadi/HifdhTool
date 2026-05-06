@@ -1,0 +1,121 @@
+.quran-snippet-container {
+  direction: rtl;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  position: relative;
+  overflow: hidden;
+  max-width: 100%;
+  margin: 0.5rem 0;
+  transition: all 0.3s ease;
+}
+
+.quran-snippet-container:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
+}
+
+.quran-snippet-content {
+  font-size: 1.8rem; /* Scaled down for snippet display */
+  line-height: 2.2;
+  text-align: justify;
+  user-select: none;
+}
+
+/* Script Specific Fonts */
+.snippet-madani {
+  font-family: 'UthmanicHafs', serif;
+}
+
+.snippet-indopak {
+  font-family: 'DigitalKhattIndoPak', 'UthmanicHafs', serif;
+}
+
+/* Soft Clipping (Fade In/Out) */
+.snippet-clipping-mask {
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    black 15%,
+    black 85%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    black 15%,
+    black 85%,
+    transparent 100%
+  );
+}
+
+/* If it's a single line snippet, horizontal fade instead */
+.snippet-single-line {
+  mask-image: linear-gradient(
+    to left,
+    transparent 0%,
+    black 10%,
+    black 90%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to left,
+    transparent 0%,
+    black 10%,
+    black 90%,
+    transparent 100%
+  );
+}
+
+/* Rendering Core Styles Reused */
+.snippet-line {
+  display: block;
+  width: 100%;
+  min-height: 2.5em;
+  white-space: normal; /* Snippets allow overflow-wrap if container is narrow */
+  margin-bottom: 0.5rem;
+}
+
+.snippet-line.centered {
+  text-align: center;
+}
+
+.snippet-line.justified {
+  text-align: justify;
+  text-justify: kashida;
+  text-align-last: center; /* Better for short snippets than 'justify' */
+}
+
+/* Highlighting the actual task range */
+.word-in-range {
+  color: var(--text-primary);
+  opacity: 1;
+}
+
+.word-context {
+  opacity: 0.35;
+  filter: blur(0.5px);
+  transition: opacity 0.3s ease;
+}
+
+.quran-snippet-container:hover .word-context {
+  opacity: 0.5;
+}
+
+.snippet-ayah-marker {
+  color: var(--primary-color);
+  font-size: 0.85em;
+  margin: 0 0.3rem;
+  vertical-align: middle;
+}
+
+.snippet-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80px;
+  color: var(--text-secondary);
+  font-style: italic;
+  font-size: 0.9rem;
+}

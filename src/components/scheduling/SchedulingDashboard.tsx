@@ -21,12 +21,14 @@ function getRuLabel(type: string, value: string | number): string {
 }
 
 function DailyActionCards({ 
-  confirmedTasks, 
+  confirmedTasks,
   onStartRevision,
+  onStartMemorization,
   currentDate
-}: { 
+}: {
   confirmedTasks: Record<string, DailyTask[]>,
   onStartRevision: (tasks: DailyTask[]) => void,
+  onStartMemorization: (tasks: DailyTask[]) => void,
   currentDate: Date
 }) {
   const today = currentDate;
@@ -77,7 +79,11 @@ function DailyActionCards({
     return labels;
   };
 
-  const revisionPortions = getConsolidatedLabels(tasksForToday);
+  const revisionTasks = tasksForToday.filter(t => t.scheduleType !== 'memorization');
+  const memorizationTasks = tasksForToday.filter(t => t.scheduleType === 'memorization');
+
+  const revisionPortions = getConsolidatedLabels(revisionTasks);
+  const memorizationPortions = getConsolidatedLabels(memorizationTasks);
 
   return (
     <div className="sd-action-row">
@@ -97,7 +103,8 @@ function DailyActionCards({
         <h3 className="sd-action-heading">Ready to revise?</h3>
         <button 
           className="sd-action-btn sd-action-btn--revision"
-          onClick={() => onStartRevision(tasksForToday)}
+          onClick={() => onStartRevision(revisionTasks)}
+          disabled={revisionTasks.length === 0}
         >
           Start Revision
         </button>
@@ -111,13 +118,19 @@ function DailyActionCards({
         <div className="sd-action-text-stack">
           <span className="sd-action-portion">Today's Portion</span>
           <div className="sd-action-label">
-            {revisionPortions.map((lp, idx) => (
+            {memorizationPortions.map((lp, idx) => (
               <div key={idx}>{lp}</div>
             ))}
           </div>
         </div>
         <h3 className="sd-action-heading">Begin new Hifdh</h3>
-        <button className="sd-action-btn sd-action-btn--memorization">Start Memorization</button>
+        <button 
+          className="sd-action-btn sd-action-btn--memorization"
+          onClick={() => onStartMemorization(memorizationTasks)}
+          disabled={memorizationTasks.length === 0}
+        >
+          Start Memorization
+        </button>
       </div>
     </div>
   );
@@ -152,12 +165,13 @@ export function SchedulingDashboard({ scriptStyle }: Props) {
           const ruLabel = getRuLabel(ru.unitType, ru.unitValue);
           
           ru.scheduleList.forEach(su => {
-            // Reconstruct minimal details
+            const scheduleType = sched.type === 'memorization' ? 'memorization' : 'revision';
             const dailyTask: DailyTask = {
               ...su,
               ruId: ru.id,
               ruType: ru.unitType,
               ruLabel,
+              scheduleType,
               details: [su.displayLabel]
             };
 
@@ -221,6 +235,11 @@ export function SchedulingDashboard({ scriptStyle }: Props) {
     setIsSessionOpen(true);
   };
 
+  const handleStartMemorization = (tasks: DailyTask[]) => {
+    setSessionTasks(tasks);
+    setIsSessionOpen(true);
+  };
+
   return (
     <div className="sd-section">
       {isDevMode && (
@@ -257,12 +276,17 @@ export function SchedulingDashboard({ scriptStyle }: Props) {
           onGenerateTasks={(tasks) => setPreviewTasks(tasks)} 
           onClearTasks={() => setPreviewTasks({})} 
         />
-        <MemorizationScheduler scriptStyle={scriptStyle} />
+        <MemorizationScheduler 
+          scriptStyle={scriptStyle}
+          onGenerateTasks={(tasks) => setPreviewTasks(tasks)} 
+          onClearTasks={() => setPreviewTasks({})} 
+        />
       </div>
 
       <DailyActionCards 
         confirmedTasks={confirmedTasks} 
         onStartRevision={handleStartRevision}
+        onStartMemorization={handleStartMemorization}
         currentDate={currentDate}
       />
 

@@ -167,7 +167,7 @@ export function ScheduleManager() {
             });
 
             return (
-              <div key={schedule.id} className="sm-schedule-card">
+              <div key={schedule.id} className={`sm-schedule-card ${schedule.type === 'memorization' ? 'sm-schedule-card--memorization' : ''}`}>
                 {/* Level 1: Schedule Header */}
                 <div className="sm-card-header" onClick={() => toggleSchedule(schedule.id)}>
                   <span className="sm-card-serial">{sIdx + 1}.</span>

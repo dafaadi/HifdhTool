@@ -402,6 +402,7 @@ export function RevisionScheduler({ scriptStyle, onGenerateTasks, onClearTasks }
 
     const newSchedule: Schedule = {
       id: crypto.randomUUID(),
+      type: 'revision',
       title: 'Revision Schedule',
       createdAt: new Date().toISOString(),
       isDeleted: false,

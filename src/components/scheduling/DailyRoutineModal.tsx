@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Eye, Lightbulb, MessageSquare, RotateCw, AlertCircle, CheckCircle2, CheckCheck } from 'lucide-react';
-import { type DailyTask, type QuranMetadata, type ScriptStyle } from '../../utils/memorizationEngine.v2';
+import { type DailyTask, type QuranMetadata, type ScriptStyle, mergeOverlappingIntervals } from '../../utils/memorizationEngine.v2';
 import { Rating, type Card } from 'ts-fsrs';
 import { quranFsrs, handleGradeScheduleUnit } from '../../utils/fsrsLogic';
 import type { Schedule } from '../../types';
@@ -23,7 +23,7 @@ export function DailyRoutineModal({ isOpen, onClose, tasks, scriptStyle, current
   const [showText, setShowText] = useState(false);
   
   // Actualization Celebration State
-  const [celebration, setCelebration] = useState<{ ruLabel: string, nextDueDate: string, isMegaCelebration?: boolean } | null>(null);
+  const [celebration, setCelebration] = useState<{ruLabel: string, nextDueDate: string, isMegaCelebration: boolean, message?: string} | null>(null);
   
   // Visual Feedback State
   const [isFlashing, setIsFlashing] = useState(false);
@@ -31,9 +31,11 @@ export function DailyRoutineModal({ isOpen, onClose, tasks, scriptStyle, current
   useEffect(() => {
     if (isOpen) {
       // 1. THE DECOUPLED SESSION QUEUE (The Clean Rewrite)
-      // Initialize the active deck as a decoupled mutation-safe copy of the tasks.
-      setSessionQueue([...tasks]);
-      setTotalSessionTasks(tasks.length);
+      // Initialize the active deck as a decoupled mutation-safe copy of the tasks,
+      // strictly filtering out items that are already marked as completed (shells).
+      const activeTasks = tasks.filter(t => !t.isCompleted);
+      setSessionQueue(activeTasks);
+      setTotalSessionTasks(activeTasks.length);
       setShowText(false);
       setCelebration(null);
       setIsFlashing(false);
@@ -109,7 +111,13 @@ export function DailyRoutineModal({ isOpen, onClose, tasks, scriptStyle, current
     if (!targetScheduleId) return;
 
     // Process final FSRS logic and DB persistence ONCE
-    const { schedules: updatedSchedules, actualization } = handleGradeScheduleUnit(
+    const { 
+      schedules: updatedSchedules, 
+      actualization,
+      graduatedRanges,
+      unitCelebration,
+      megaCelebration
+    } = handleGradeScheduleUnit(
       schedules,
       targetScheduleId,
       currentTask.ruId!,
@@ -123,6 +131,19 @@ export function DailyRoutineModal({ isOpen, onClose, tasks, scriptStyle, current
     );
 
     localStorage.setItem('schedules', JSON.stringify(updatedSchedules));
+
+    // Handle Graduated Ranges Push
+    if (graduatedRanges && graduatedRanges.length > 0) {
+      try {
+        const hifdhObj = JSON.parse(localStorage.getItem('hifdhRangesV2') || '{"ranges":[]}');
+        const currentRanges = hifdhObj.ranges || [];
+        const mergedRanges = mergeOverlappingIntervals([...currentRanges, ...graduatedRanges]);
+        localStorage.setItem('hifdhRangesV2', JSON.stringify({ ranges: mergedRanges }));
+        window.dispatchEvent(new Event('hifdhRangesUpdated'));
+      } catch (err) {
+        console.error('Failed to update hifdhRangesV2 upon graduation:', err);
+      }
+    }
 
     // Calculate if this action exhausts the queue (for mega celebration tracking)
     const sessionWillBeDone = sessionQueue.length === 1;
@@ -148,8 +169,24 @@ export function DailyRoutineModal({ isOpen, onClose, tasks, scriptStyle, current
       // 1. Remove the passed item from the active learning deck
       setSessionQueue(prev => prev.slice(1));
 
-      // 2. Trigger Portion Actualization celebration if applicable
-      if (actualization) {
+      // 2. Trigger appropriate celebrations
+      if (megaCelebration) {
+        setCelebration({
+           ruLabel: megaCelebration.ruLabel,
+           nextDueDate: megaCelebration.nextDueDate || new Date().toISOString(),
+           isMegaCelebration: true,
+           message: megaCelebration.message
+        });
+      } else if (unitCelebration && !actualization) {
+        // We defer unit celebration if an actualization hit instead? Or maybe show both?
+        // Since celebration state is single, let's prioritize mega, then unit, then actualization
+        setCelebration({
+           ruLabel: 'Graduation',
+           nextDueDate: new Date().toISOString(),
+           isMegaCelebration: false,
+           message: unitCelebration.message
+        });
+      } else if (actualization) {
         setCelebration({
            ruLabel: actualization.ruLabel,
            nextDueDate: actualization.newMacroDueDate,
@@ -324,9 +361,15 @@ export function DailyRoutineModal({ isOpen, onClose, tasks, scriptStyle, current
           <div className="drm-content" style={{ maxWidth: '400px', padding: '32px', textAlign: 'center' }}>
             <div style={{ fontSize: '3rem', marginBottom: '16px' }}>👏</div>
             <h2 style={{ color: '#f3f4f6', fontFamily: "'Playfair Display', serif", marginBottom: '12px' }}>أحسنت</h2>
-            <p style={{ color: '#d1d5db', lineHeight: 1.6, marginBottom: '24px' }}>
-              Great work on completing <strong>{celebration.ruLabel}</strong>. We ask Allah to accept your efforts 🤲
-            </p>
+            {celebration.message ? (
+              <p style={{ color: '#d1d5db', lineHeight: 1.6, marginBottom: '24px', whiteSpace: 'pre-line' }}>
+                {celebration.message}
+              </p>
+            ) : (
+              <p style={{ color: '#d1d5db', lineHeight: 1.6, marginBottom: '24px' }}>
+                Great work on completing <strong>{celebration.ruLabel}</strong>. We ask Allah to accept your efforts 🤲
+              </p>
+            )}
             <div style={{ background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '12px', marginBottom: '24px', border: '1px solid rgba(255,255,255,0.06)' }}>
               <p style={{ margin: 0, fontSize: '0.85rem', color: '#9ca3af' }}>Next revision scheduled for:</p>
               <p style={{ margin: '4px 0 0 0', fontWeight: 'bold', color: '#74c69d' }}>

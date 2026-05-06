@@ -33,6 +33,8 @@ export interface ScheduleUnit {
   isMacroRoutine: boolean;
   dueDateLimit?: string | Date;
   isDeleted: boolean;
+  taskType?: 'revision' | 'memorization';
+  isMemorizationGraduated?: boolean;
 }
 
 export interface RevisionUnitData {
@@ -48,10 +50,12 @@ export interface RevisionUnitData {
   priorityValue: number;
   routineDurationDays: number;
   ruRange: [number, number];
+  taskType?: 'revision' | 'memorization';
 }
 
 export interface Schedule {
   id: string;
+  type?: 'revision' | 'memorization';
   title: string;
   createdAt: string;
   isDeleted: boolean;

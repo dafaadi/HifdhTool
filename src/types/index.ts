@@ -80,6 +80,7 @@ export type DailyTask = ScheduleUnit & {
   suType?:        string;
   isCompleted?:   boolean;
   wasFailedToday?: boolean;
+  scheduleType?:  'revision' | 'memorization';
 };
 
 export interface ProjectedTask {
@@ -89,6 +90,7 @@ export interface ProjectedTask {
   ruId:         string;
   surahNumber:  number;
   ruType:       string;
+  scheduleType?: 'revision' | 'memorization';
 }
 
 export interface SUEntry {

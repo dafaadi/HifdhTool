@@ -18,15 +18,18 @@ interface Props {
 const WEEKDAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
 const TASK_COLORS = [
-  { bg: 'rgba(22, 101, 52, 0.2)',  border: '#166534', tx: '#86efac' }, // Rich Green
-  { bg: 'rgba(21, 128, 61, 0.2)',  border: '#15803d', tx: '#4ade80' }, // Grass
-  { bg: 'rgba(5, 150, 105, 0.2)',  border: '#059669', tx: '#6ee7b7' }, // Emerald
-  { bg: 'rgba(4, 120, 87, 0.2)',   border: '#047857', tx: '#34d399' }, // Teal Green
-  { bg: 'rgba(63, 98, 18, 0.2)',   border: '#3f6212', tx: '#bef264' }, // Olive Green
-  { bg: 'rgba(101, 163, 13, 0.2)', border: '#65a30d', tx: '#d9f99d' }, // Lime Green
+  { bg: 'rgba(22, 101, 52, 0.2)',  border: '#166534', tx: 'var(--sd-txt-rev-0)' }, 
+  { bg: 'rgba(21, 128, 61, 0.2)',  border: '#15803d', tx: 'var(--sd-txt-rev-1)' }, 
+  { bg: 'rgba(5, 150, 105, 0.2)',  border: '#059669', tx: 'var(--sd-txt-rev-2)' }, 
+  { bg: 'rgba(4, 120, 87, 0.2)',   border: '#047857', tx: 'var(--sd-txt-rev-3)' }, 
+  { bg: 'rgba(63, 98, 18, 0.2)',   border: '#3f6212', tx: 'var(--sd-txt-rev-4)' }, 
+  { bg: 'rgba(101, 163, 13, 0.2)', border: '#65a30d', tx: 'var(--sd-txt-rev-5)' }, 
 ];
 
-function getTaskStyles(ruId?: string) {
+function getTaskStyles(ruId?: string, scheduleType?: string) {
+  if (scheduleType === 'memorization') {
+    return { bg: 'rgba(202, 138, 4, 0.2)', border: '#ca8a04', tx: 'var(--sd-txt-memo)' }; 
+  }
   if (!ruId) return TASK_COLORS[0];
   let hash = 0;
   for (let i = 0; i < ruId.length; i++) {
@@ -36,20 +39,23 @@ function getTaskStyles(ruId?: string) {
   return TASK_COLORS[index];
 }
 
-const GRAY_PALETTE = [
-  { bg: 'rgba(113, 113, 122, 0.1)', border: '#52525b', tx: '#a1a1aa' }, // Zinc
-  { bg: 'rgba(100, 116, 139, 0.1)', border: '#475569', tx: '#94a3b8' }, // Slate
-  { bg: 'rgba(115, 115, 115, 0.1)', border: '#525252', tx: '#a3a3a3' }, // Neutral
+const GREEN_PROJECTION_PALETTE = [
+  { bg: 'rgba(22, 101, 52, 0.08)',  border: 'rgba(22, 101, 52, 0.25)',  tx: 'var(--sd-txt-rev-0)' }, 
+  { bg: 'rgba(21, 128, 61, 0.08)',  border: 'rgba(21, 128, 61, 0.25)',  tx: 'var(--sd-txt-rev-1)' }, 
+  { bg: 'rgba(5, 105, 105, 0.08)',  border: 'rgba(5, 105, 105, 0.25)',  tx: 'var(--sd-txt-rev-2)' }, 
 ];
 
-function getProjectedStyles(ruId?: string) {
-  if (!ruId) return GRAY_PALETTE[0];
+function getProjectedStyles(ruId?: string, scheduleType?: string) {
+  if (scheduleType === 'memorization') {
+    return { bg: 'rgba(202, 138, 4, 0.08)', border: 'rgba(202, 138, 4, 0.25)', tx: 'var(--sd-txt-memo)' }; 
+  }
+  if (!ruId) return GREEN_PROJECTION_PALETTE[0];
   let hash = 0;
   for (let i = 0; i < ruId.length; i++) {
     hash = ruId.charCodeAt(i) + ((hash << 5) - hash);
   }
-  const index = Math.abs(hash) % GRAY_PALETTE.length;
-  return GRAY_PALETTE[index];
+  const index = Math.abs(hash) % GREEN_PROJECTION_PALETTE.length;
+  return GREEN_PROJECTION_PALETTE[index];
 }
 
 function getDaysInMonth(year: number, month: number) {
@@ -180,8 +186,9 @@ export function CalendarPreview({ taskMap, scriptStyle, currentDate, isDevMode, 
         if (ru.isDeleted || hiddenRuIds.has(ru.id)) return;
         const pts = generateProjectedSUs(ru, metadata as any, scriptStyle);
         pts.forEach(pt => {
-          if (!projections[pt.dateKey]) projections[pt.dateKey] = [];
-          projections[pt.dateKey].push(pt);
+          const ptWithScheduleType = { ...pt, scheduleType: s.type || 'revision' };
+          if (!projections[ptWithScheduleType.dateKey]) projections[ptWithScheduleType.dateKey] = [];
+          projections[ptWithScheduleType.dateKey].push(ptWithScheduleType);
         });
       });
     });
@@ -279,7 +286,7 @@ export function CalendarPreview({ taskMap, scriptStyle, currentDate, isDevMode, 
                      <span className="sd-cal-day-num">{c.day}</span>
                      <div className="sd-cal-task-list">
                        {c.dailyTasks.map((t, idx) => {
-                         const theme = getTaskStyles(t.ruId);
+                         const theme = getTaskStyles(t.ruId, t.scheduleType);
                          const isCompleted = t.isCompleted;
                          const isHighlighted = !isCompleted && recentlyGraded.some(g => g.id === t.id);
 
@@ -301,7 +308,7 @@ export function CalendarPreview({ taskMap, scriptStyle, currentDate, isDevMode, 
                          );
                        })}
                        {c.projectedTasks.map((t, idx) => {
-                         const theme = getProjectedStyles(t.ruId);
+                         const theme = getProjectedStyles(t.ruId, t.scheduleType);
                          return (
                            <div 
                              key={`p-${idx}`} 
